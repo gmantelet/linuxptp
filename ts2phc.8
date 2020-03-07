@@ -55,6 +55,8 @@ Use the key word "generic" for an external 1-PPS without ToD information.
 When using a master PHC, the clock may be identified by its character
 device (like /dev/ptp0) or its associated network interface (like
 eth0).
+Use the key word "nmea" for an external 1-PPS from a GPS providing ToD
+information via the RMC NMEA sentence.
 .TP
 .B \-v
 Prints the software version and exits.
@@ -134,6 +136,21 @@ The maximum offset, specified in seconds, that the servo will correct
 by changing the clock frequency instead of stepping the clock. When
 set to 0.0, the servo will never step the clock except on start.
 The default is 0.0.
+.TP
+.B ts2phc.nmea_remote_host, ts2phc.nmea_remote_port
+Specifies the serial port character device providing ToD information
+when using the "nmea" PPS signal source.  Note that if these two
+options are both specified, then the given remote connection will be
+used in preference to the configured serial port.
+These options default to the empty string, that is, not specified.
+.TP
+.B ts2phc.nmea_serialport
+Specifies the serial port character device providing ToD information
+when using the "nmea" PPS signal source.  Note that if the options,
+ts2phc.nmea_remote_host and ts2phc.nmea_remote_port, are both
+specified, then the given remote connection will be used in preference
+to the configured serial port.
+The default is "/dev/ttyS0".
 .TP
 .B ts2phc.pulsewidth
 The expected pulse width of the external PPS signal in nanoseconds.
