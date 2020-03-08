@@ -32,6 +32,7 @@ struct ts2phc_nmea_master {
 		struct timespec local_monotime;
 		struct timespec local_utctime;
 		struct timespec rmc_utctime;
+		bool rmc_fix_valid;
 		int tai_offset;
 	};
 };
@@ -116,15 +117,14 @@ static void *monitor_nmea_status(void *arg)
 		ptr = input;
 		do {
 			if (!nmea_parse(np, ptr, cnt, &rmc, &parsed)) {
-				// TODO - check rmc.fix_valid
 				pthread_mutex_lock(&master->mutex);
 				master->local_monotime = rxtime;
 				master->local_utctime.tv_sec = ntx.time.tv_sec;
 				master->local_utctime.tv_nsec = ntx.time.tv_usec;
 				master->rmc_utctime = rmc.ts;
+				master->rmc_fix_valid = rmc.fix_valid;
+				master->tai_offset = ntx.tai; // TODO - use leap seconds file instead.
 				pthread_mutex_unlock(&master->mutex);
-				// TODO - Find a way to get the offset from the GPS.
-				master->tai_offset = ntx.tai;
 			}
 			cnt -= parsed;
 			ptr += parsed;

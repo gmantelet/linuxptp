@@ -6,6 +6,7 @@
 #ifndef HAVE_NMEA_H
 #define HAVE_NMEA_H
 
+#include <stdbool.h>
 #include <time.h>
 
 /** Opaque type. */
@@ -13,7 +14,7 @@ struct nmea_parser;
 
 struct nmea_rmc {
 	struct timespec ts;
-	int fix_valid;
+	bool fix_valid;
 };
 
 /**
