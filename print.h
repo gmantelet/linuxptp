@@ -37,6 +37,7 @@ void print_set_tag(const char *tag);
 void print_set_syslog(int value);
 void print_set_level(int level);
 void print_set_verbose(int value);
+void print_set_security(int value);
 
 #define pr_emerg(x...)   print(LOG_EMERG, x)
 #define pr_alert(x...)   print(LOG_ALERT, x)

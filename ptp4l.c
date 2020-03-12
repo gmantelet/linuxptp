@@ -62,6 +62,7 @@ static void usage(char *progname)
 		" -l [num]  set the logging level to 'num'\n"
 		" -m        print messages to stdout\n"
 		" -q        do not print messages to the syslog\n"
+		" -k        set the secure flag\n"
 		" -v        prints the software version and exits\n"
 		" -h        prints this message and exits\n"
 		"\n",
@@ -162,6 +163,9 @@ int main(int argc, char *argv[])
 		case 'q':
 			config_set_int(cfg, "use_syslog", 0);
 			break;
+		case 'k':
+			config_set_int(cfg, "use_security", 1);
+			break;
 		case 'v':
 			version_show(stdout);
 			return 0;
@@ -185,6 +189,7 @@ int main(int argc, char *argv[])
 	print_set_tag(config_get_string(cfg, NULL, "message_tag"));
 	print_set_verbose(config_get_int(cfg, NULL, "verbose"));
 	print_set_syslog(config_get_int(cfg, NULL, "use_syslog"));
+	print_set_security(config_get_int(cfg, NULL, "use_security"));
 	print_set_level(config_get_int(cfg, NULL, "logging_level"));
 
 	assume_two_step = config_get_int(cfg, NULL, "assume_two_step");
