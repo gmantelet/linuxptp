@@ -1371,7 +1371,7 @@ static int port_pdelay_request(struct port *p)
 	msg->header.sourcePortIdentity = p->portIdentity;
 	msg->header.sequenceId         = p->seqnum.delayreq++;
 	msg->header.control            = CTL_OTHER;
-	msg->header.logMessageInterval = asCapable(p) ?
+	msg->header.logMessageInterval = p->asCapable ?
 		p->logPdelayReqInterval : 0x7f;
 
 	if (unicast_client_enabled(p) && p->unicast_master_table->peer_name) {
