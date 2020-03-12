@@ -48,6 +48,7 @@
 #define ALT_MASTER     (1<<0)
 #define TWO_STEP       (1<<1)
 #define UNICAST        (1<<2)
+#define SECURE         (1<<7)
 
 /* Bits for flagField[1] */
 #define LEAP_61        (1<<0)

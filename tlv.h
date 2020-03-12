@@ -309,6 +309,54 @@ struct tlv_extra {
 	};
 };
 
+
+enum algorithm_id_values {
+	ALGORITHM_ID_NULL,
+	ALGORITHM_ID_HMAC_SHA1_96,
+	ALGORITHM_ID_HMAC_SHA2_128,
+};
+
+struct authentication_tlv {
+	Enumeration16 type;
+	UInteger16    length;
+	UInteger16    lifetime_id;
+	UInteger32    replay_counter;
+	UInteger16    key_id;
+	Enumeration8  algorithm_id;
+	UInteger8     reserved;
+	Octet         icv[16];
+} PACKED;
+
+enum authentication_challenge_type {
+	CHALLENGE_REQUEST,
+	CHALLENGE_RESPONSE_REQUEST,
+	CHALLENGE_RESPONSE,
+};
+
+struct authentication_challenge_tlv {
+	Enumeration16 type;
+	UInteger16    length;
+	Enumeration8  challenge_type;
+	UInteger8     reserved;
+	UInteger32    request_nonce;
+	UInteger32    response_nonce;
+} PACKED;
+
+enum sa_address_type {
+	SA_ADDRESS_TYPE_ALL,
+	SA_ADDRESS_TYPE_MULTICAST,
+	SA_ADDRESS_TYPE_P_MULTICAST,
+	SA_ADDRESS_TYPE_UNICAST,
+};
+
+struct security_association_update_tlv {
+	Enumeration16 type;
+	UInteger16    length;
+	Enumeration8  address_type;
+	UInteger8     reserved;
+	UInteger16    next_key_id;
+	UInteger16    next_lifetime_id;
+} PACKED;
 /**
  * Allocates a new tlv_extra structure.
  * @return  Pointer to a new structure on success or NULL otherwise.

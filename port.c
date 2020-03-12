@@ -410,6 +410,71 @@ static int follow_up_info_append(struct ptp_message *m)
 	return 0;
 }
 
+/*
+ * Add an authentication TLV to the message being sent. Do not forget to make
+ * it the LAST TLV in message.
+ *
+ * Reference: IEEE 1588-2008 Annex K.
+ */
+static int authentication_tlv_append(struct ptp_message *m)
+{
+	struct authentication_tlv *auth;
+	struct tlv_extra *extra;
+
+	extra = msg_tlv_append(m, sizeof(*auth));
+	if (!extra) {
+		return -1;
+	}
+
+	auth = (struct authentication_tlv *) extra->tlv;
+	auth->type = TLV_AUTHENTICATION;
+	auth->length = sizeof(*auth) - sizeof(auth->type) - sizeof(auth->length);
+	auth->lifetime_id = 0;                            // TODO: Security Association
+	auth->replay_counter = 4;                         // TODO: Transmit State Machine
+	auth->key_id = 65535;                             // TODO: KeyStore
+	auth->algorithm_id = ALGORITHM_ID_HMAC_SHA2_128;  // TODO: An enum please
+    memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
+	return 0;
+}
+
+static int authentication_challenge_tlv_append(struct ptp_message *m)
+{
+	struct authentication_challenge_tlv *auth;
+	struct tlv_extra *extra;
+
+	extra = msg_tlv_append(m, sizeof(*auth));
+	if (!extra) {
+		return -1;
+	}
+
+	auth = (struct authentication_challenge_tlv *) extra->tlv;
+	auth->type = TLV_AUTHENTICATION_CHALLENGE;
+	auth->length = sizeof(*auth) - sizeof(auth->type) - sizeof(auth->length);
+	auth->challenge_type = CHALLENGE_REQUEST;   // TODO: An enum please
+	auth->request_nonce = 100;                  // TODO: Transmit State Machine
+	auth->response_nonce = 0;                   // TODO: Transmit State Machine
+	return 0;
+}
+
+static int security_association_update_tlv_append(struct ptp_message *m)
+{
+	struct security_association_update_tlv *sa;
+	struct tlv_extra *extra;
+
+	extra = msg_tlv_append(m, sizeof(*sa));
+	if (!extra) {
+		return -1;
+	}
+
+	sa = (struct security_association_update_tlv *) extra->tlv;
+	sa->type = TLV_SECURITY_ASSOCIATION_UPDATE;
+	sa->length = sizeof(*sa) - sizeof(sa->type) - sizeof(sa->length);
+	sa->address_type = SA_ADDRESS_TYPE_ALL;  // TODO: An enum please
+	sa->next_key_id = 100;                   // TODO: Transmit State Machine
+	sa->next_lifetime_id = 0;                // TODO: Transmit State Machine
+	return 0;
+}
+
 static int net_sync_resp_append(struct port *p, struct ptp_message *m)
 {
 	struct timePropertiesDS *tp = clock_time_properties(p->clock);
@@ -1306,12 +1371,36 @@ static int port_pdelay_request(struct port *p)
 	msg->header.sourcePortIdentity = p->portIdentity;
 	msg->header.sequenceId         = p->seqnum.delayreq++;
 	msg->header.control            = CTL_OTHER;
-	msg->header.logMessageInterval = port_is_ieee8021as(p) ?
+	msg->header.logMessageInterval = asCapable(p) ?
 		p->logPdelayReqInterval : 0x7f;
 
 	if (unicast_client_enabled(p) && p->unicast_master_table->peer_name) {
 		msg->address = p->unicast_master_table->peer_addr.address;
 		msg->header.flagField[0] |= UNICAST;
+	}
+
+    if (p->use_secure_flag)
+		msg->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(msg))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
 	}
 
 	err = peer_prepare_and_send(p, msg, TRANS_EVENT);
@@ -1378,6 +1467,30 @@ int port_delay_request(struct port *p)
 		msg->header.flagField[0] |= UNICAST;
 	}
 
+    if (p->use_secure_flag)
+		msg->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(msg))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
 	if (port_prepare_and_send(p, msg, TRANS_EVENT)) {
 		pr_err("port %hu: send delay request failed", portnum(p));
 		goto out;
@@ -1440,6 +1553,30 @@ int port_tx_announce(struct port *p, struct address *dst)
 
 	if (p->path_trace_enabled && path_trace_append(p, msg, dad)) {
 		pr_err("port %hu: append path trace failed", portnum(p));
+	}
+
+    if (p->use_secure_flag)
+		msg->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(msg))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
 	}
 
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
@@ -1510,6 +1647,31 @@ int port_tx_sync(struct port *p, struct address *dst)
 		msg->header.flagField[0] |= UNICAST;
 		msg->header.logMessageInterval = 0x7f;
 	}
+
+    if (p->use_secure_flag)
+		msg->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(msg))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
 	err = port_prepare_and_send(p, msg, event);
 	if (err) {
 		pr_err("port %hu: send sync failed", portnum(p));
@@ -1545,6 +1707,30 @@ int port_tx_sync(struct port *p, struct address *dst)
 	}
 	if (p->follow_up_info && follow_up_info_append(fup)) {
 		pr_err("port %hu: append fup info failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+    if (p->use_secure_flag)
+		fup->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(fup))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(fup))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(fup))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
@@ -1672,6 +1858,10 @@ int port_initialize(struct port *p)
 	p->operLogPdelayReqInterval = config_get_int(cfg, p->name, "operLogPdelayReqInterval");
 	p->neighborPropDelayThresh = config_get_int(cfg, p->name, "neighborPropDelayThresh");
 	p->min_neighbor_prop_delay = config_get_int(cfg, p->name, "min_neighbor_prop_delay");
+	p->use_secure_flag         = config_get_int(cfg, p->name, "use_security");
+
+	if (p->use_secure_flag)
+		pr_notice("port %hu: uses secure flag", portnum(p));
 
 	if (config_get_int(cfg, p->name, "asCapable") == AS_CAPABLE_TRUE) {
 		p->asCapable = ALWAYS_CAPABLE;
@@ -1883,6 +2073,31 @@ static int process_delay_req(struct port *p, struct ptp_message *m)
 		err = -1;
 		goto out;
 	}
+
+    if (p->use_secure_flag)
+		msg->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(msg))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(msg))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
 	if (err) {
 		pr_err("port %hu: send delay response failed", portnum(p));
@@ -2077,6 +2292,30 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 		rsp->header.flagField[0] |= UNICAST;
 	}
 
+    if (p->use_secure_flag)
+		rsp->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(rsp))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(rsp))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(rsp))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
 	err = peer_prepare_and_send(p, rsp, event);
 	if (err) {
 		pr_err("port %hu: send peer delay response failed", portnum(p));
@@ -2113,6 +2352,30 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 	if (msg_unicast(m)) {
 		fup->address = m->address;
 		fup->header.flagField[0] |= UNICAST;
+	}
+
+    if (p->use_secure_flag)
+		fup->header.flagField[0] |= SECURE;
+
+	if (p->use_secure_flag && authentication_challenge_tlv_append(fup))
+	{
+		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && security_association_update_tlv_append(fup))
+	{
+		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		err = -1;
+		goto out;
+	}
+
+	if (p->use_secure_flag && authentication_tlv_append(fup))
+	{
+		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		err = -1;
+		goto out;
 	}
 
 	err = peer_prepare_and_send(p, fup, TRANS_GENERAL);

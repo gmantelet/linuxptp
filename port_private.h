@@ -149,6 +149,7 @@ struct port {
 	/* unicast service mode */
 	struct unicast_service *unicast_service;
 	int inhibit_multicast_service;
+	int use_secure_flag;
 };
 
 #define portnum(p) (p->portIdentity.portNumber)
