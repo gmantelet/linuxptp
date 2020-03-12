@@ -1473,21 +1473,18 @@ int port_delay_request(struct port *p)
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
 		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
 		pr_err("port %hu: append security association update tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
 		pr_err("port %hu: append authentication tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
@@ -1561,21 +1558,18 @@ int port_tx_announce(struct port *p, struct address *dst)
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
 		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
 		pr_err("port %hu: append security association update tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
 		pr_err("port %hu: append authentication tlv failed", portnum(p));
-		err = -1;
 		goto out;
 	}
 
@@ -1585,6 +1579,10 @@ int port_tx_announce(struct port *p, struct address *dst)
 	}
 	msg_put(msg);
 	return err;
+
+out:
+	msg_put(msg);
+	return -1;
 }
 
 int port_tx_sync(struct port *p, struct address *dst)
