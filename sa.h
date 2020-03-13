@@ -20,6 +20,8 @@
 #ifndef HAVE_SA_H
 #define HAVE_SA_H
 
+#include <sys/queue.h>
+#include "ddt.h"
 
 enum TrustState
 {
@@ -69,7 +71,7 @@ LIST_HEAD(incoming_sa_list, security_association) incoming_sa;
 LIST_HEAD(outgoing_sa_list, security_association) outgoing_sa;
 
 int init_security_association_tables(void);
-int add_incoming_sa(char *buf, );
+int add_incoming_sa(char *buf, struct ClockIdentity *ci);
 int add_outgoing_sa(char *buf);
 
 // LIST_INIT(&key_head);
