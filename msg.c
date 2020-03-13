@@ -429,6 +429,62 @@ int msg_post_recv(struct ptp_message *m, int cnt)
 	return 0;
 }
 
+int msg_secure_recv(struct ptp_message *m)
+{
+	struct authentication_tlv              *auth;
+	struct authentication_challenge_tlv    *chal;
+	struct security_association_update_tlv *saup;
+	struct tlv_extra                       *extra;
+
+	int cnt = 0;
+	int tmp = -1;
+
+	if ((msg->header.flagField[0] & SECURE) != SECURE)
+	{
+		pr_err("No Secure flag on PTP message received by secured port.");
+		return -1;
+	}
+
+	TAILQ_FOREACH(extra, &m->tlv_list, list)
+	{
+		switch (extra->tlv.type)
+		{
+			case TLV_AUTHENTICATION:
+				if (tmp != -1)
+				{
+					pr_err("Multiple Authentication tlv");
+					return -1;
+				}
+				auth = (struct authentication_tlv *) extra->tlv;
+				break;
+
+			case TLV_AUTHENTICATION_CHALLENGE:
+				chal = (struct authentication_challenge_tlv *) extra->tlv;
+				break;
+
+			case TLV_SECURITY_ASSOCIATION_UPDATE:
+				saup = (struct security_association_update_tlv *) extra->tlv;
+			default: break;
+		}
+		cnt++;
+	}
+
+	if (auth == NULL)
+	{
+		pr_err("No Authentication TLV detected on secured PTP message.");
+		return -1;
+	}
+
+	if (tmp != cnt)
+	{
+		pr_err("Authentication tlv is not the last TLV");
+		return -1;
+	}
+
+
+	return 0;
+}
+
 int msg_pre_send(struct ptp_message *m)
 {
 	int type;

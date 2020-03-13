@@ -362,6 +362,13 @@ void msg_get(struct ptp_message *m);
 int msg_post_recv(struct ptp_message *m, int cnt);
 
 /**
+ * Process messages authentication TLVs after reception,
+ * @param m    A message obtained using @ref msg_allocate().
+ * @return   Zero on success, non-zero if the message is invalid.
+ */
+int msg_secure_recv(struct ptp_message *m);
+
+/**
  * Prepare messages for transmission.
  * @param m  A message obtained using @ref msg_allocate().
  * @return   Zero on success, non-zero if the message is invalid.

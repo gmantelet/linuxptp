@@ -1371,7 +1371,7 @@ static int port_pdelay_request(struct port *p)
 	msg->header.sourcePortIdentity = p->portIdentity;
 	msg->header.sequenceId         = p->seqnum.delayreq++;
 	msg->header.control            = CTL_OTHER;
-	msg->header.logMessageInterval = asCapable(p) ?
+	msg->header.logMessageInterval = p->asCapable ?
 		p->logPdelayReqInterval : 0x7f;
 
 	if (unicast_client_enabled(p) && p->unicast_master_table->peer_name) {
@@ -2912,6 +2912,16 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		msg_put(msg);
 		return EV_NONE;
 	}
+
+    if (p->use_secure_flag)
+    {
+    	err = msg_secure_recv(msg);
+    	if (err)
+    		pr_err("port %hu: untrusted message", portnum(p));
+    		msg_put(msg);
+    		return EV_NONE;
+    }
+
 	port_stats_inc_rx(p, msg);
 	if (port_ignore(p, msg)) {
 		msg_put(msg);
