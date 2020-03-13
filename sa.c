@@ -22,11 +22,11 @@ int add_incoming_sa(char *buf, struct ClockIdentity *ci)
     memcpy(&(sa->dst_port), ci, sizeof(struct ClockIdentity));
     sa->dst_port.portNumber = 1;
 
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", sa->src_port.clockIdentity.id[0],
-           sa->src_port.clockIdentity.id[1], sa->src_port.clockIdentity.id[2],
-           sa->src_port.clockIdentity.id[3], sa->src_port.clockIdentity.id[4],
-           sa->src_port.clockIdentity.id[5], sa->src_port.clockIdentity.id[6],
-           sa->src_port.clockIdentity.id[7], sa->src_port.portNumber);
+    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", &(sa->src_port)->clockIdentity.id[0],
+           &(sa->src_port)->clockIdentity.id[1], &(sa->src_port)->clockIdentity.id[2],
+           &(sa->src_port)->clockIdentity.id[3], &(sa->src_port)->clockIdentity.id[4],
+           &(sa->src_port)->clockIdentity.id[5], &(sa->src_port)->clockIdentity.id[6],
+           &(sa->src_port)->clockIdentity.id[7], &(sa->src_port)->portNumber);
 
 
     if (incoming_sa.lh_first == NULL)
@@ -50,11 +50,11 @@ int add_outgoing_sa(char *buf)
     memset(sa, 0, sizeof(struct security_association));
     memset(&(sa->src_port), 255, sizeof(struct PortIdentity));
 
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", sa->dst_port.clockIdentity.id[0],
-           sa->dst_port.clockIdentity.id[1], sa->dst_port.clockIdentity.id[2],
-           sa->dst_port.clockIdentity.id[3], sa->dst_port.clockIdentity.id[4],
-           sa->dst_port.clockIdentity.id[5], sa->dst_port.clockIdentity.id[6],
-           sa->dst_port.clockIdentity.id[7], sa->dst_port.portNumber);
+    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", &(sa->dst_port)->clockIdentity.id[0],
+           &(sa->dst_port)->clockIdentity.id[1], &(sa->dst_port)->clockIdentity.id[2],
+           &(sa->dst_port)->clockIdentity.id[3], &(sa->dst_port)->clockIdentity.id[4],
+           &(sa->dst_port)->clockIdentity.id[5], &(sa->dst_port)->clockIdentity.id[6],
+           &(sa->dst_port)->clockIdentity.id[7], &(sa->dst_port)->portNumber);
 
 
     if (outgoing_sa.lh_first == NULL)
