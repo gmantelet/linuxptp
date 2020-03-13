@@ -14,14 +14,14 @@ int init_security_association_tables(void)
 int add_incoming_sa(char *buf, struct ClockIdentity *ci)
 {
     struct security_association *sa, *sap, *last;
-    unsigned char cid[8];
-    unsigned short pnum;
+    unsigned char cid[8] = {0};
+    unsigned int pnum = 0;
 
     if ((sa = malloc(sizeof(struct security_association))) == NULL)
         return -1;  // Memory allocation error
 
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", cid[0], cid[1], cid[2], cid[3],
-            cid[4], cid[5], cid[6], &pnum);
+    sscanf (buf,"%hhu:%hhu:%hhu:%hhu:%hhu:%hhu:%hhu:%hhu.%u", cid, cid + 1, cid + 2, cid + 3,
+            cid + 4, cid + 5, cid + 6, cid + 7, &pnum);
 
     memset(sa, 0, sizeof(struct security_association));
     memcpy(&(sa->dst_port), ci, sizeof(struct ClockIdentity));
@@ -43,14 +43,14 @@ int add_incoming_sa(char *buf, struct ClockIdentity *ci)
 int add_outgoing_sa(char *buf)
 {
     struct security_association *sa, *sap, *last;
-    unsigned char cid[8];
-    unsigned short pnum;
+    unsigned char cid[8] = {0};
+    unsigned int pnum = 0;
 
     if ((sa = malloc(sizeof(struct security_association))) == NULL)
         return -1;  // Memory allocation error
 
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", cid[0], cid[1], cid[2], cid[3],
-            cid[4], cid[5], cid[6], &pnum);
+    sscanf (buf,"%hhu:%hhu:%hhu:%hhu:%hhu:%hhu:%hhu:%hhu.%u", cid, cid + 1, cid + 2, cid + 3,
+            cid + 4, cid + 5, cid + 6, cid + 7, &pnum);
 
     memset(sa, 0, sizeof(struct security_association));
     memset(&(sa->src_port), 255, sizeof(struct PortIdentity));
