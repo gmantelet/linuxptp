@@ -25,7 +25,7 @@
 
 
 struct key {
-    TAILQ_ENTRY(key) list;
+    LIST_ENTRY(key)  key_entries;
     UInteger16       key_id;
     UInteger8        algorithm_id;
     Octet            security_key[32];
@@ -36,7 +36,21 @@ struct key {
 
 struct key_store
 {
-    TAILQ_HEAD(key_list, key) key_list;
+    LIST_HEAD(key_list, key) key_head;
+    struct key_head *key_list;  // List head.
 };
 
+// LIST_INIT(&key_head);
+//
+// k1 = malloc(sizeof(struct key));      // Insert at the head
+// LIST_INSERT_HEAD(&key_head, k1, key_entries);
+//
+// k2 = malloc(sizeof(struct key));      // Insert after
+// LIST_INSERT_AFTER(k1, k2, key_entries);
+//
+// for (kp = key_head.lh_first; kp != NULL; kp = kp->key_entries.le_next)  // Forward traversal
+//    np-> ...
+//
+//  while (key_head.lh_first != NULL)           // Delete.
+//    LIST_REMOVE(key_head.lh_first, key_entries);
 #endif

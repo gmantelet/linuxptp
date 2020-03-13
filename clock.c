@@ -35,6 +35,7 @@
 #include "msg.h"
 #include "phc.h"
 #include "port.h"
+#include "sa.h"
 #include "servo.h"
 #include "stats.h"
 #include "print.h"
@@ -1116,6 +1117,43 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 			return NULL;
 		}
 	}
+
+	if (config_get_int(config, NULL, "use_security"))
+	{
+		pr_info("Clock Security: Retrieving Static Security Associations");
+		if (init_security_association_tables())
+		{
+			pr_err("Failed to fetch Static Security Associations. Aborting.");
+			return NULL;
+		}
+
+		tmp = config_get_string(config, NULL, "incoming_sa");
+		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 7))
+		{
+			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy");
+			return NULL;
+		}
+
+		if (add_incoming_sa(tmp, &(c->dds.clockIdentity)))
+		{
+			pr_err("Failed to fetch incoming sa");
+			return NULL;
+		}
+
+		tmp = config_get_string(config, NULL, "outgoing_sa");
+		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 7))
+		{
+			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy");
+			return NULL;
+		}
+
+		if (add_outgoing_sa(tmp))
+		{
+			pr_err("Failed to fetch outgoing sa");
+			return NULL;
+		}
+	}
+
 
 	/* Initialize the parentDS. */
 	clock_update_grandmaster(c);
