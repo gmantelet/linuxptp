@@ -439,7 +439,7 @@ int msg_secure_recv(struct ptp_message *m)
 	int cnt = 0;
 	int tmp = -1;
 
-	if ((msg->header.flagField[0] & SECURE) != SECURE)
+	if ((m->header.flagField[0] & SECURE) != SECURE)
 	{
 		pr_err("No Secure flag on PTP message received by secured port.");
 		return -1;
@@ -447,7 +447,7 @@ int msg_secure_recv(struct ptp_message *m)
 
 	TAILQ_FOREACH(extra, &m->tlv_list, list)
 	{
-		switch (extra->tlv.type)
+		switch (extra->tlv->type)
 		{
 			case TLV_AUTHENTICATION:
 				if (tmp != -1)
