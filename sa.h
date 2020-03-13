@@ -25,19 +25,19 @@ enum TrustState
 {
     UNTRUSTED,
     TRUSTED,
-}
+};
 
 enum ChallengeState
 {
     IDLE,
     CHALLENGING,
-}
+};
 
 enum SATypeField
 {
     STATIC,
     DYNAMIC,
-}
+};
 
 
 struct security_association
