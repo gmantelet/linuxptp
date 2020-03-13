@@ -14,20 +14,20 @@ int init_security_association_tables(void)
 int add_incoming_sa(char *buf, struct ClockIdentity *ci)
 {
     struct security_association *sa, *sap, *last;
+    unsigned char cid[8];
+    unsigned short pnum;
 
     if ((sa = malloc(sizeof(struct security_association))) == NULL)
         return -1;  // Memory allocation error
 
+    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", cid[0], cid[1], cid[2], cid[3],
+            cid[4], cid[5], cid[6], &pnum);
+
     memset(sa, 0, sizeof(struct security_association));
     memcpy(&(sa->dst_port), ci, sizeof(struct ClockIdentity));
     sa->dst_port.portNumber = 1;
-
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", &(sa->src_port)->clockIdentity.id[0],
-           &(sa->src_port)->clockIdentity.id[1], &(sa->src_port)->clockIdentity.id[2],
-           &(sa->src_port)->clockIdentity.id[3], &(sa->src_port)->clockIdentity.id[4],
-           &(sa->src_port)->clockIdentity.id[5], &(sa->src_port)->clockIdentity.id[6],
-           &(sa->src_port)->clockIdentity.id[7], &(sa->src_port)->portNumber);
-
+    memcpy(&(sa->src_port), cid, sizeof(struct PortIdentity));
+    sa->src_port.portNumber = pnum;
 
     if (incoming_sa.lh_first == NULL)
         LIST_INSERT_HEAD(&incoming_sa, sa, sa_entry);
@@ -43,19 +43,19 @@ int add_incoming_sa(char *buf, struct ClockIdentity *ci)
 int add_outgoing_sa(char *buf)
 {
     struct security_association *sa, *sap, *last;
+    unsigned char cid[8];
+    unsigned short pnum;
 
     if ((sa = malloc(sizeof(struct security_association))) == NULL)
         return -1;  // Memory allocation error
 
+    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", cid[0], cid[1], cid[2], cid[3],
+            cid[4], cid[5], cid[6], &pnum);
+
     memset(sa, 0, sizeof(struct security_association));
     memset(&(sa->src_port), 255, sizeof(struct PortIdentity));
-
-    sscanf (buf,"%u:%u:%u:%u:%u:%u:%u:%u.%u", &(sa->dst_port)->clockIdentity.id[0],
-           &(sa->dst_port)->clockIdentity.id[1], &(sa->dst_port)->clockIdentity.id[2],
-           &(sa->dst_port)->clockIdentity.id[3], &(sa->dst_port)->clockIdentity.id[4],
-           &(sa->dst_port)->clockIdentity.id[5], &(sa->dst_port)->clockIdentity.id[6],
-           &(sa->dst_port)->clockIdentity.id[7], &(sa->dst_port)->portNumber);
-
+    memcpy(&(sa->dst_port), cid, sizeof(struct PortIdentity));
+    sa->dst_port.portNumber = pnum;
 
     if (outgoing_sa.lh_first == NULL)
         LIST_INSERT_HEAD(&outgoing_sa, sa, sa_entry);
