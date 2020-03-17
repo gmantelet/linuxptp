@@ -1128,9 +1128,9 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 		}
 
 		tmp = config_get_string(config, NULL, "incoming_sa");
-		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 7))
+		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 12) || (count_char(tmp, ',') != 1))
 		{
-			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy");
+			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy,zz:zz:zz:zz:zz:zz");
 			return NULL;
 		}
 
@@ -1141,9 +1141,9 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 		}
 
 		tmp = config_get_string(config, NULL, "outgoing_sa");
-		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 7))
+		if ((count_char(tmp, '.') != 1) || (count_char(tmp, ':') != 12) || (count_char(tmp, ',') != 1))
 		{
-			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy");
+			pr_err("Please format SA like this: xx:xx:xx:FF:FE:xx:xx:xx.yyyy,zz:zz:zz:zz:zz:zz");
 			return NULL;
 		}
 

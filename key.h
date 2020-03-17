@@ -40,6 +40,9 @@ struct key_store
     struct key_head *key_list;  // List head.
 };
 
+struct key* get_key(UInteger16 key_id);
+void fetch_key(void);
+
 // LIST_INIT(&key_head);
 //
 // k1 = malloc(sizeof(struct key));      // Insert at the head
