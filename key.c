@@ -6,7 +6,9 @@
 #include <unistd.h>
 #include <semaphore.h>
 #include <string.h>
+#include <linux/kernel.h>
 #include "key.h"
+#include "print.h"
 
 #define KEY_LENGTH 65
 
@@ -17,7 +19,7 @@ struct key* get_key(UInteger16 key_id)
 {
     struct key *k = NULL;
 
-    for (k = key_head.lh_first; k != NULL; k = k->key_entries.le_next)
+    for (k = ks.key_head.lh_first; k != NULL; k = k->key_entries.le_next)
     {
         if (k->key_id)
             return k;
@@ -53,7 +55,7 @@ void fetch_key(void)
     if (!sem_wait(semptr))
     {
         int i;
-        for (i = 0; i < strlen(KEY_LENGTH); i++)
+        for (i = 0; i < KEY_LENGTH; i++)
             buf[i] = (char) (*(memptr + i));
         sem_post(semptr);
     }
@@ -67,10 +69,10 @@ void fetch_key(void)
 
     memcpy(k, buf, KEY_LENGTH);
 
-    if (key_head.lh_first == NULL)
-        LIST_INSERT_HEAD(&key_head, k, key_entries);
+    if (ks.key_head.lh_first == NULL)
+        LIST_INSERT_HEAD(&(ks.key_head), k, key_entries);
     else
-        for (kp = key_head.lh_first; kp != NULL; kp = kp->key_entries.le_next)
+        for (kp = ks.key_head.lh_first; kp != NULL; kp = kp->key_entries.le_next)
             kl = kp;
 
         LIST_INSERT_AFTER(kl, kp, key_entries);
@@ -80,5 +82,4 @@ void fetch_key(void)
     close(fd);
     sem_close(semptr);
     unlink("shm_keystore");
-    return 0;
 }

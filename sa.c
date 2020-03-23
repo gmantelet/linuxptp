@@ -74,15 +74,15 @@ int add_outgoing_sa(char *buf)
     return 0;
 }
 
-struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port, char *dst_addr)
+struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port, char *dst_add)
 {
     struct security_association *sa = NULL;
 
     for (sa = incoming_sa.lh_first; sa != NULL; sa = sa->sa_entry.le_next)
     {
-        if (!memcmp(sa->src_port, src_port, sizeof(struct PortIdentity)) &&
+        if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)) &&
             !memcmp(sa->src_address, src_add, 6) &&
-            !memcmp(sa->dst_port, dst_port, sizeof(struct PortIdentity)) &&
+            !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)) &&
             !memcmp(sa->dst_address, dst_add, 6))
             return sa;
     }
@@ -90,15 +90,15 @@ struct security_association* get_incoming_sa(struct PortIdentity *src_port, char
     return NULL;
 }
 
-struct security_association* get_outgoing_sa(struct PortIdentity*, char *, struct PortIdentity *, char *)
+struct security_association* get_outgoing_sa(struct PortIdentity *dst_port, char *dst_add, struct PortIdentity *src_port, char *src_add)
 {
     struct security_association *sa = NULL;
 
     for (sa = outgoing_sa.lh_first; sa != NULL; sa = sa->sa_entry.le_next)
     {
-        if (!memcmp(sa->src_port, src_port, sizeof(struct PortIdentity)) &&
+        if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)) &&
             !memcmp(sa->src_address, src_add, 6) &&
-            !memcmp(sa->dst_port, dst_port, sizeof(struct PortIdentity)) &&
+            !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)) &&
             !memcmp(sa->dst_address, dst_add, 6))
             return sa;
     }
