@@ -7,12 +7,24 @@
 #include <semaphore.h>
 #include <string.h>
 #include <linux/kernel.h>
+
+#include <sodium.h>
+
 #include "key.h"
 #include "print.h"
 
 #define KEY_LENGTH 65
 
 static struct key_store ks;
+
+
+int init_keystore(void)
+{
+    if (sodium_init() == -1)
+        return 1;
+
+    return 0;
+}
 
 
 struct key* get_key(UInteger16 key_id)
