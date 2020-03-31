@@ -74,7 +74,7 @@ int add_outgoing_sa(char *buf)
     return 0;
 }
 
-struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port, char *dst_addr)
+struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port, char *dst_add)
 {
     struct security_association *sa = NULL;
 
@@ -90,7 +90,7 @@ struct security_association* get_incoming_sa(struct PortIdentity *src_port, char
     return NULL;
 }
 
-struct security_association* get_outgoing_sa(struct PortIdentity*, char *, struct PortIdentity *, char *)
+struct security_association* get_outgoing_sa(struct PortIdentity *dst_port, char *dst_add, struct PortIdentity *src_port, char *src_add)
 {
     struct security_association *sa = NULL;
 
