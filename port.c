@@ -423,10 +423,12 @@ static int authentication_tlv_append(struct ptp_message *m)
 	struct authentication_tlv *auth;
 	struct tlv_extra *extra;
 
+        pr_info("Before msg_tlv_append");
 	extra = msg_tlv_append(m, sizeof(*auth));
 	if (!extra) {
 		return -1;
 	}
+        pr_info("After msg_tlv_append");
 
 	auth = (struct authentication_tlv *) extra->tlv;
 	auth->type = TLV_AUTHENTICATION;
@@ -1386,21 +1388,21 @@ static int port_pdelay_request(struct port *p)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: PdelayReq append authentication challenge tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: PdelayReq append security association update tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: PdelayReq append authentication tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
@@ -1474,19 +1476,19 @@ int port_delay_request(struct port *p)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: DelayReq append authentication challenge tlv failed", portnum(p));
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: DelayReq append security association update tlv failed", portnum(p));
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: DelayReq append authentication tlv failed", portnum(p));
 		goto out;
 	}
 
@@ -1559,19 +1561,19 @@ int port_tx_announce(struct port *p, struct address *dst)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: Announce append authentication challenge tlv failed", portnum(p));
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: Announce append security association update tlv failed", portnum(p));
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: Announce append authentication tlv failed", portnum(p));
 		goto out;
 	}
 
@@ -1653,21 +1655,21 @@ int port_tx_sync(struct port *p, struct address *dst)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: Sync append authentication challenge tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: Sync append security association update tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: Sync append authentication tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
@@ -2079,14 +2081,14 @@ static int process_delay_req(struct port *p, struct ptp_message *m)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(msg))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: DelayResp append authentication challenge tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(msg))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: DelayResp append security association update tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
@@ -2297,21 +2299,21 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(rsp))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: PdelayResp append authentication challenge tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(rsp))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: PdelayResp append security association update tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(rsp))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: PdelayResp append authentication tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
@@ -2359,21 +2361,21 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 
 	if (p->use_secure_flag && authentication_challenge_tlv_append(fup))
 	{
-		pr_err("port %hu: append authentication challenge tlv failed", portnum(p));
+		pr_err("port %hu: PdelayRespFollowUp append authentication challenge tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && security_association_update_tlv_append(fup))
 	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
+		pr_err("port %hu: PdelayRespFollowUp append security association update tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
 
 	if (p->use_secure_flag && authentication_tlv_append(fup))
 	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
+		pr_err("port %hu: PdelayRespFollowUp append authentication tlv failed", portnum(p));
 		err = -1;
 		goto out;
 	}
