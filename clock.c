@@ -1134,7 +1134,8 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 			return NULL;
 		}
 
-		if (add_incoming_sa(tmp, &(c->dds.clockIdentity)))
+                struct ClockIdentity ci = c->dds.clockIdentity;
+		if (add_incoming_sa(tmp, &c->dds.clockIdentity))
 		{
 			pr_err("Failed to fetch incoming sa");
 			return NULL;
