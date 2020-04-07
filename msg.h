@@ -117,39 +117,42 @@ struct announce_msg {
 } PACKED;
 
 struct sync_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    originTimestamp;
+	struct ptp_header    hdr;
+	struct Timestamp     originTimestamp;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct delay_req_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    originTimestamp;
-	uint8_t             suffix[0];
+	struct ptp_header    hdr;
+	struct Timestamp     originTimestamp;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct follow_up_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    preciseOriginTimestamp;
-	uint8_t             suffix[0];
+	struct ptp_header    hdr;
+	struct Timestamp     preciseOriginTimestamp;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct delay_resp_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    receiveTimestamp;
-	struct PortIdentity requestingPortIdentity;
-	uint8_t             suffix[0];
+	struct ptp_header    hdr;
+	struct Timestamp     receiveTimestamp;
+	struct PortIdentity  requestingPortIdentity;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct pdelay_req_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    originTimestamp;
-	struct PortIdentity reserved;
+	struct ptp_header    hdr;
+	struct Timestamp     originTimestamp;
+	struct PortIdentity  reserved;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct pdelay_resp_msg {
-	struct ptp_header   hdr;
-	struct Timestamp    requestReceiptTimestamp;
-	struct PortIdentity requestingPortIdentity;
+	struct ptp_header    hdr;
+	struct Timestamp     requestReceiptTimestamp;
+	struct PortIdentity  requestingPortIdentity;
+	uint8_t              suffix[0];
 } PACKED;
 
 struct pdelay_resp_fup_msg {
