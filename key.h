@@ -43,6 +43,7 @@ struct key_store
 int init_keystore(void);
 struct key* get_key(UInteger16 key_id);
 void fetch_key(void);
+void generate_icv(const unsigned char *, int, unsigned char *, unsigned char *);
 
 // LIST_INIT(&key_head);
 //

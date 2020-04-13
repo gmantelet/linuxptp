@@ -423,12 +423,10 @@ static int authentication_tlv_append(struct ptp_message *m)
 	struct authentication_tlv *auth;
 	struct tlv_extra *extra;
 
-        pr_info("Before msg_tlv_append");
 	extra = msg_tlv_append(m, sizeof(*auth));
 	if (!extra) {
 		return -1;
 	}
-        pr_info("After msg_tlv_append");
 
 	auth = (struct authentication_tlv *) extra->tlv;
 	auth->type = TLV_AUTHENTICATION;
@@ -437,13 +435,18 @@ static int authentication_tlv_append(struct ptp_message *m)
 	auth->replay_counter = 4;                         // TODO: Transmit State Machine
 	auth->key_id = 65535;                             // TODO: KeyStore
 	auth->algorithm_id = ALGORITHM_ID_HMAC_SHA2_128;  // TODO: An enum please
-    memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
+
+	unsigned char icv[32];
+    generate_icv((unsigned char *)m, m->header.messageLength, icv, NULL);  //TODO: NULL for asking dummy key
+
+    // memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
+    memcpy(auth->icv, icv, sizeof(auth->icv));
 	return 0;
 }
 
 static int authentication_challenge_tlv_append(struct ptp_message *m)
 {
-	struct authentication_challenge_tlv *auth;
+/*	struct authentication_challenge_tlv *auth;
 	struct tlv_extra *extra;
 
 	extra = msg_tlv_append(m, sizeof(*auth));
@@ -456,13 +459,13 @@ static int authentication_challenge_tlv_append(struct ptp_message *m)
 	auth->length = sizeof(*auth) - sizeof(auth->type) - sizeof(auth->length);
 	auth->challenge_type = CHALLENGE_REQUEST;   // TODO: An enum please
 	auth->request_nonce = 100;                  // TODO: Transmit State Machine
-	auth->response_nonce = 0;                   // TODO: Transmit State Machine
+	auth->response_nonce = 0;                   // TODO: Transmit State Machine*/
 	return 0;
 }
 
 static int security_association_update_tlv_append(struct ptp_message *m)
 {
-	struct security_association_update_tlv *sa;
+/*	struct security_association_update_tlv *sa;
 	struct tlv_extra *extra;
 
 	extra = msg_tlv_append(m, sizeof(*sa));
@@ -475,7 +478,7 @@ static int security_association_update_tlv_append(struct ptp_message *m)
 	sa->length = sizeof(*sa) - sizeof(sa->type) - sizeof(sa->length);
 	sa->address_type = SA_ADDRESS_TYPE_ALL;  // TODO: An enum please
 	sa->next_key_id = 100;                   // TODO: Transmit State Machine
-	sa->next_lifetime_id = 0;                // TODO: Transmit State Machine
+	sa->next_lifetime_id = 0;                // TODO: Transmit State Machine*/
 	return 0;
 }
 

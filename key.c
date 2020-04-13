@@ -18,14 +18,42 @@
 static struct key_store ks;
 
 
+static struct key dummy_key;
+
+
 int init_keystore(void)
 {
     if (sodium_init() == -1)
         return 1;
 
+    dummy_key.key_id = 255;
+    dummy_key.algorithm_id = 2;
+    for (int i=0; i<32; i++)
+        dummy_key.security_key[i] = 0x5A;
+
     return 0;
 }
 
+
+void generate_icv(const unsigned char *msg, int msg_len, unsigned char *icv, unsigned char *key)
+{
+    char msg[1024];
+    char buf[16];
+
+    if (key == NULL)
+        key = &dummy_key;
+
+    crypto_auth_hmacsha256_keygen(key);
+    crypto_auth_hmacsha256(hash, msg, msg_len, key);
+
+    strcpy(msg,  "ICV: ");
+    for (int i=0; i<32; i++)
+    {
+        strcpy(buf,  "%2x ", icv[i]);
+        strcat(msg, buf);
+    }
+    pr_info(msg)
+}
 
 struct key* get_key(UInteger16 key_id)
 {
