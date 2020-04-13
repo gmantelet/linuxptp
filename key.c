@@ -37,22 +37,13 @@ int init_keystore(void)
 
 void generate_icv(const unsigned char *msg, int msg_len, unsigned char *icv, unsigned char *key)
 {
-    char msg[1024];
-    char buf[16];
-
     if (key == NULL)
-        key = &dummy_key;
+        key = dummy_key.security_key;
 
-    crypto_auth_hmacsha256_keygen(key);
-    crypto_auth_hmacsha256(hash, msg, msg_len, key);
+    // crypto_auth_hmacsha256_keygen(key);
+    crypto_auth_hmacsha256(icv, msg, msg_len, key);
 
-    strcpy(msg,  "ICV: ");
-    for (int i=0; i<32; i++)
-    {
-        strcpy(buf,  "%2x ", icv[i]);
-        strcat(msg, buf);
-    }
-    pr_info(msg)
+    pr_info("ICV: %2x %2x %2x %2x %2x %2x %2x %2x ", icv[0], icv[1], icv[2], icv[3], icv[4], icv[5], icv[6], icv[7]);
 }
 
 struct key* get_key(UInteger16 key_id)
