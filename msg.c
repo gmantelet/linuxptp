@@ -445,6 +445,8 @@ int msg_secure_recv(struct ptp_message *m)
 		return -1;
 	}
 
+    pr_info("Extracting TLVs from %s", msg_type_string(msg_type(msg)));
+
 	TAILQ_FOREACH(extra, &m->tlv_list, list)
 	{
 		switch (extra->tlv->type)
@@ -455,16 +457,23 @@ int msg_secure_recv(struct ptp_message *m)
 					pr_err("Multiple Authentication tlv");
 					return -1;
 				}
+			    pr_info("TLV authentication");
 				auth = (struct authentication_tlv *) extra->tlv;
+				tmp = cnt;
 				break;
 
 			case TLV_AUTHENTICATION_CHALLENGE:
+			    pr_info("TLV authentication challenge");
 				chal = (struct authentication_challenge_tlv *) extra->tlv;
 				break;
 
 			case TLV_SECURITY_ASSOCIATION_UPDATE:
+			    pr_info("TLV security association update");
 				saup = (struct security_association_update_tlv *) extra->tlv;
-			default: break;
+
+			default:
+			    pr_info("TLV type %04x", extra->tlv->type);
+				break;
 		}
 		cnt++;
 	}
@@ -477,10 +486,9 @@ int msg_secure_recv(struct ptp_message *m)
 
 	if (tmp != cnt)
 	{
-		pr_err("Authentication tlv is not the last TLV");
+		pr_err("Authentication tlv is not the last TLV. Got %d TLVs, and it is at %d", cnt, tmp);
 		return -1;
 	}
-
 
 	return 0;
 }
