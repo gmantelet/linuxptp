@@ -320,7 +320,7 @@ struct authentication_tlv {
 	Enumeration16 type;
 	UInteger16    length;
 	UInteger16    lifetime_id;
-	UInteger32    replay_counter;
+	UInteger16    replay_counter;
 	UInteger16    key_id;
 	Enumeration8  algorithm_id;
 	UInteger8     reserved;

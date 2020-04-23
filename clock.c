@@ -31,6 +31,7 @@
 #include "clockcheck.h"
 #include "foreign.h"
 #include "filter.h"
+#include "key.h"
 #include "missing.h"
 #include "msg.h"
 #include "phc.h"
@@ -1134,7 +1135,7 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 			return NULL;
 		}
 
-                struct ClockIdentity ci = c->dds.clockIdentity;
+                // struct ClockIdentity ci = c->dds.clockIdentity;
 		if (add_incoming_sa(tmp, &c->dds.clockIdentity))
 		{
 			pr_err("Failed to fetch incoming sa");
@@ -1151,6 +1152,13 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 		if (add_outgoing_sa(tmp))
 		{
 			pr_err("Failed to fetch outgoing sa");
+			return NULL;
+		}
+
+                pr_info("Clock Security: Initializing keystore");
+		if (init_keystore())
+		{
+			pr_err("Failed to initialize keystore. Aborting.");
 			return NULL;
 		}
 	}

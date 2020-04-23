@@ -57,13 +57,13 @@ all: $(PRG)
 
 ptp4l: $(OBJ)
 
-nsm: config.o $(FILTERS) hash.o interface.o msg.o nsm.o phc.o print.o \
+nsm: config.o $(FILTERS) hash.o interface.o key.o msg.o nsm.o phc.o print.o \
  rtnl.o sk.o $(TRANSP) tlv.o tsproc.o util.o version.o
 
-pmc: config.o hash.o interface.o msg.o phc.o pmc.o pmc_common.o print.o sk.o \
+pmc: config.o hash.o interface.o key.o msg.o phc.o pmc.o pmc_common.o print.o sk.o \
  tlv.o $(TRANSP) util.o version.o
 
-phc2sys: clockadj.o clockcheck.o config.o hash.o interface.o msg.o \
+phc2sys: clockadj.o clockcheck.o config.o hash.o interface.o key.o msg.o \
  phc.o phc2sys.o pmc_common.o print.o $(SERVOS) sk.o stats.o \
  sysoff.o tlv.o $(TRANSP) util.o version.o
 

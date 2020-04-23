@@ -436,11 +436,6 @@ static int authentication_tlv_append(struct ptp_message *m)
 	auth->key_id = 65535;                             // TODO: KeyStore
 	auth->algorithm_id = ALGORITHM_ID_HMAC_SHA2_128;  // TODO: An enum please
 
-	unsigned char icv[32];
-    generate_icv((unsigned char *)m, m->header.messageLength, icv, NULL);  //TODO: NULL for asking dummy key
-
-    // memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
-    memcpy(auth->icv, icv, sizeof(auth->icv));
 	return 0;
 }
 

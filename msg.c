@@ -26,6 +26,7 @@
 #include "msg.h"
 #include "print.h"
 #include "tlv.h"
+#include "key.h"
 
 #define VERSION_MASK 0x0f
 #define VERSION      0x02
@@ -230,8 +231,25 @@ static void suffix_pre_send(struct ptp_message *msg)
 	TAILQ_FOREACH(extra, &msg->tlv_list, list) {
 		tlv = extra->tlv;
 		tlv_pre_send(tlv, extra);
-		tlv->type = htons(tlv->type);
-		tlv->length = htons(tlv->length);
+
+                if (tlv->type == TLV_AUTHENTICATION)
+                {
+               	    unsigned char icv[32];
+                    struct authentication_tlv *auth = (struct authentication_tlv *)tlv;        
+		    tlv->type = htons(tlv->type);
+		    tlv->length = htons(tlv->length);
+
+                    generate_icv((unsigned char *)msg, ntohs(msg->header.messageLength), icv, NULL);  //TODO: NULL for asking dummy key
+
+                    // memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
+                    memcpy(auth->icv, icv, sizeof(auth->icv));
+                }
+
+                else
+                {
+      		    tlv->type = htons(tlv->type);
+		    tlv->length = htons(tlv->length);
+                }
 	}
 	msg_tlv_recycle(msg);
 }
@@ -445,10 +463,9 @@ int msg_secure_recv(struct ptp_message *m)
 		return -1;
 	}
 
-    pr_info("Extracting TLVs from %s", msg_type_string(msg_type(msg)));
-
 	TAILQ_FOREACH(extra, &m->tlv_list, list)
 	{
+		cnt++;
 		switch (extra->tlv->type)
 		{
 			case TLV_AUTHENTICATION:
@@ -457,25 +474,27 @@ int msg_secure_recv(struct ptp_message *m)
 					pr_err("Multiple Authentication tlv");
 					return -1;
 				}
-			    pr_info("TLV authentication");
 				auth = (struct authentication_tlv *) extra->tlv;
 				tmp = cnt;
+
+				if (validate_icv((unsigned char *)m, m->header.messageLength, auth->icv, NULL)) //TODO: NULL for asking dummy key
+                                {
+                                    pr_err("Invalid ICV on %sd", msg_type_string(msg_type(m)));
+                                    return 1;
+                                }
+
 				break;
 
 			case TLV_AUTHENTICATION_CHALLENGE:
-			    pr_info("TLV authentication challenge");
 				chal = (struct authentication_challenge_tlv *) extra->tlv;
 				break;
 
 			case TLV_SECURITY_ASSOCIATION_UPDATE:
-			    pr_info("TLV security association update");
 				saup = (struct security_association_update_tlv *) extra->tlv;
 
 			default:
-			    pr_info("TLV type %04x", extra->tlv->type);
 				break;
 		}
-		cnt++;
 	}
 
 	if (auth == NULL)

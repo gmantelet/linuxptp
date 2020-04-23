@@ -739,6 +739,9 @@ void tlv_pre_send(struct TLV *tlv, struct tlv_extra *extra)
 {
 	struct management_tlv *mgt;
 	struct management_error_status *mes;
+        struct authentication_tlv *auth;
+        struct authentication_challenge_tlv *chal;
+        struct security_association_update_tlv *sa;
 
 	switch (tlv->type) {
 	case TLV_MANAGEMENT:
@@ -763,14 +766,27 @@ void tlv_pre_send(struct TLV *tlv, struct tlv_extra *extra)
 		break;
 	case TLV_PATH_TRACE:
 	case TLV_ALTERNATE_TIME_OFFSET_INDICATOR:
-	case TLV_AUTHENTICATION:
-	case TLV_AUTHENTICATION_CHALLENGE:
-	case TLV_SECURITY_ASSOCIATION_UPDATE:
 	case TLV_CUM_FREQ_SCALE_FACTOR_OFFSET:
 	case TLV_PTPMON_REQ:
 		break;
 	case TLV_PTPMON_RESP:
 		nsm_resp_pre_send(extra);
+		break;
+        case TLV_AUTHENTICATION:
+                auth = (struct authentication_tlv *) tlv;
+                auth->lifetime_id = htons(auth->lifetime_id);
+                auth->replay_counter = htons(auth->replay_counter);
+                auth->key_id = htons(auth->key_id);
+         	break;
+        case TLV_AUTHENTICATION_CHALLENGE:
+                chal = (struct authentication_challenge_tlv *) tlv;
+                chal->request_nonce = htonl(chal->request_nonce);
+                chal->response_nonce = htonl(chal->response_nonce);
+		break;
+        case TLV_SECURITY_ASSOCIATION_UPDATE:
+                sa = (struct security_association_update_tlv *) tlv;
+                sa->next_key_id = htonl(sa->next_key_id);
+                sa->next_lifetime_id = htonl(sa->next_lifetime_id);
 		break;
 	default:
 		break;
