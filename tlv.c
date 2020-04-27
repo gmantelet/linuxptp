@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "port.h"
+#include "print.h"
 #include "tlv.h"
 #include "msg.h"
 
@@ -683,6 +684,9 @@ int tlv_post_recv(struct tlv_extra *extra)
 	struct management_error_status *mes;
 	struct TLV *tlv = extra->tlv;
 	struct path_trace_tlv *ptt;
+        struct authentication_tlv *auth;
+        struct authentication_challenge_tlv *chal;
+        struct security_association_update_tlv *sa;
 
 	switch (tlv->type) {
 	case TLV_MANAGEMENT:
@@ -719,8 +723,39 @@ int tlv_post_recv(struct tlv_extra *extra)
 		break;
 	case TLV_ALTERNATE_TIME_OFFSET_INDICATOR:
 	case TLV_AUTHENTICATION:
-	case TLV_AUTHENTICATION_CHALLENGE:
-	case TLV_SECURITY_ASSOCIATION_UPDATE:
+		if (TLV_LENGTH_INVALID(tlv, authentication_tlv))
+                {
+                        pr_err("Authentication TLV: TLV length invalid");
+			goto bad_length;
+		}
+                auth = (struct authentication_tlv *) tlv;
+		auth->lifetime_id = ntohs(auth->lifetime_id);
+		auth->replay_counter = ntohs(auth->replay_counter);
+		auth->key_id = ntohs(auth->key_id);
+		break;
+
+        case TLV_AUTHENTICATION_CHALLENGE:
+		if (TLV_LENGTH_INVALID(tlv, authentication_challenge_tlv))
+                {
+                        pr_err("Authentication challenge TLV: TLV length invalid");
+			goto bad_length;
+		}
+                chal = (struct authentication_challenge_tlv *) tlv;
+                chal->request_nonce = ntohl(chal->request_nonce);
+                chal->response_nonce = ntohl(chal->response_nonce);
+		break;
+
+        case TLV_SECURITY_ASSOCIATION_UPDATE:
+		if (TLV_LENGTH_INVALID(tlv, security_association_update_tlv))
+                {
+                        pr_err("Security Association Update TLV: TLV length invalid");
+			goto bad_length;
+		}
+                sa = (struct security_association_update_tlv *) tlv;
+                sa->next_key_id = ntohl(sa->next_key_id);
+                sa->next_lifetime_id = ntohl(sa->next_lifetime_id);
+		break;
+
 	case TLV_CUM_FREQ_SCALE_FACTOR_OFFSET:
 	case TLV_PTPMON_REQ:
 		break;

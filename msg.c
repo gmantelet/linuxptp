@@ -183,6 +183,63 @@ static void port_id_pre_send(struct PortIdentity *pid)
 	pid->portNumber = htons(pid->portNumber);
 }
 
+/*
+ * Trying to locate authentication tlv
+ * So basically, what we're just trying to do is we scan the message
+ * to locate the authentication tlv, and then we look for the icv
+ * to keep other functions identical, what I do is I discard the TLVs
+ * so i introduce extra superfluous steps for the sake of monkey patching.
+ */
+static int suffix_secure_recv(struct ptp_message *msg, int len)
+{
+	uint8_t *ptr = msg_suffix(msg);
+	struct tlv_extra *extra;
+        uint16_t type;
+        uint16_t length; 
+        int msg_len = len;
+        struct authentication_tlv *auth;
+
+	if (!ptr)
+		return 0;
+
+	while (len >= sizeof(struct TLV)) {
+		extra = tlv_extra_alloc();
+		if (!extra) {
+			pr_err("failed to allocate TLV descriptor");
+			return -ENOMEM;
+		}
+		extra->tlv = (struct TLV *) ptr;
+		type = ntohs(extra->tlv->type);
+		length = ntohs(extra->tlv->length);
+		if (length % 2) {
+			tlv_extra_recycle(extra);
+			return -EBADMSG;
+		}
+		len -= sizeof(struct TLV);
+		ptr += sizeof(struct TLV);
+		if (length > len) {
+			tlv_extra_recycle(extra);
+			return -EBADMSG;
+		}
+		len -= length;
+		ptr += length;
+		
+                if (type == TLV_AUTHENTICATION)
+                {
+                    auth = (struct authentication_tlv *)extra->tlv;
+                    if (validate_icv((unsigned char *)msg, msg_len, auth->icv, NULL)) //TODO: NULL for asking dummy key
+                    {
+                        pr_err("Invalid ICV on %sd", msg_type_string(msg_type(msg)));
+			tlv_extra_recycle(extra);
+                        return -EBADMSG;
+                    }
+
+                }
+		//msg_tlv_attach(msg, extra);
+	}
+	return 0;
+}
+
 static int suffix_post_recv(struct ptp_message *msg, int len)
 {
 	uint8_t *ptr = msg_suffix(msg);
@@ -312,7 +369,7 @@ void msg_cleanup(void)
 	}
 }
 
-struct ptp_message *msg_duplicate(struct ptp_message *msg, int cnt)
+struct ptp_message *msg_duplicate(struct ptp_message *msg, int cnt, int is_secure)
 {
 	struct ptp_message *dup;
 	int err;
@@ -325,7 +382,7 @@ struct ptp_message *msg_duplicate(struct ptp_message *msg, int cnt)
 	dup->refcnt = 1;
 	TAILQ_INIT(&dup->tlv_list);
 
-	err = msg_post_recv(dup, cnt);
+	err = msg_post_recv(dup, cnt, is_secure);
 	if (err) {
 		switch (err) {
 		case -EBADMSG:
@@ -353,12 +410,19 @@ void msg_get(struct ptp_message *m)
 	m->refcnt++;
 }
 
-int msg_post_recv(struct ptp_message *m, int cnt)
+int msg_post_recv(struct ptp_message *m, int cnt, int is_secure)
 {
 	int pdulen, type, err;
 
 	if (cnt < sizeof(struct ptp_header))
 		return -EBADMSG;
+
+        if (is_secure)
+        {
+            err = suffix_secure_recv(m, htons(m->header.messageLength));
+	    if (err)
+		return err;
+        }
 
 	err = hdr_post_recv(&m->header);
 	if (err)
@@ -447,9 +511,10 @@ int msg_post_recv(struct ptp_message *m, int cnt)
 	return 0;
 }
 
+/* 
 int msg_secure_recv(struct ptp_message *m)
 {
-	struct authentication_tlv              *auth;
+        struct authentication_tlv              *auth;
 	struct authentication_challenge_tlv    *chal;
 	struct security_association_update_tlv *saup;
 	struct tlv_extra                       *extra;
@@ -510,7 +575,7 @@ int msg_secure_recv(struct ptp_message *m)
 	}
 
 	return 0;
-}
+}*/
 
 int msg_pre_send(struct ptp_message *m)
 {

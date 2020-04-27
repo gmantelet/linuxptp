@@ -337,7 +337,9 @@ static struct ptp_message *nsm_recv(struct nsm *nsm, int fd)
 		pr_err("recv message failed");
 		goto failed;
 	}
-	err = msg_post_recv(msg, cnt);
+
+        //TODO: NSM does not validate secure flag yet
+	err = msg_post_recv(msg, cnt, 0);
 	if (err) {
 		switch (err) {
 		case -EBADMSG:

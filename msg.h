@@ -348,7 +348,7 @@ void msg_cleanup(void);
  *             The returned message will be in host byte order, having
  *             been passed to @ref msg_post_recv().
  */
-struct ptp_message *msg_duplicate(struct ptp_message *msg, int cnt);
+struct ptp_message *msg_duplicate(struct ptp_message *msg, int cnt, int is_secure);
 
 /**
  * Obtain a reference to a message, increasing its reference count by one.
@@ -358,18 +358,12 @@ void msg_get(struct ptp_message *m);
 
 /**
  * Process messages after reception.
- * @param m    A message obtained using @ref msg_allocate().
- * @param cnt  The size of 'm' in bytes.
- * @return   Zero on success, non-zero if the message is invalid.
+ * @param m          A message obtained using @ref msg_allocate().
+ * @param cnt        The size of 'm' in bytes.
+ * @param is_secure  The function needs to perform an extra step that validates ICV.
+ * @return           Zero on success, non-zero if the message is invalid.
  */
-int msg_post_recv(struct ptp_message *m, int cnt);
-
-/**
- * Process messages authentication TLVs after reception,
- * @param m    A message obtained using @ref msg_allocate().
- * @return   Zero on success, non-zero if the message is invalid.
- */
-int msg_secure_recv(struct ptp_message *m);
+int msg_post_recv(struct ptp_message *m, int cnt, int is_secure);
 
 /**
  * Prepare messages for transmission.

@@ -105,6 +105,7 @@ struct clock {
 	int free_running;
 	int freq_est_interval;
 	int grand_master_capable; /* for 802.1AS only */
+        int is_secure;            /* For Annex K*/
 	int utc_timescale;
 	int utc_offset_set;
 	int leap_set;
@@ -1121,6 +1122,7 @@ struct clock *clock_create(enum clock_type type, struct config *config,
 
 	if (config_get_int(config, NULL, "use_security"))
 	{
+                c->is_secure = 1;
 		pr_info("Clock Security: Retrieving Static Security Associations");
 		if (init_security_association_tables())
 		{
@@ -1362,7 +1364,7 @@ static void clock_forward_mgmt_msg(struct clock *c, struct port *p, struct ptp_m
 		if (clock_do_forward_mgmt(c, p, c->uds_port, msg, &msg_ready))
 			pr_err("uds port: management forward failed");
 		if (msg_ready) {
-			msg_post_recv(msg, pdulen);
+                        msg_post_recv(msg, pdulen, c->is_secure);
 			msg->management.boundaryHops++;
 		}
 	}

@@ -171,10 +171,10 @@ int validate_icv(const unsigned char *msg, int msg_len, unsigned char *icv, unsi
         //pr_info("Obtained: %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x", tmp[0], tmp[1], tmp[2], tmp[3], tmp[4], tmp[5], tmp[6], tmp[7], tmp[8], tmp[9], tmp[10], tmp[11], tmp[12], tmp[13], tmp[14], tmp[15]);    
         //pr_info("Computed: %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x %2x", hmac[0], hmac[1], hmac[2], hmac[3], hmac[4], hmac[5], hmac[6], hmac[7], hmac[9], hmac[10], hmac[11], hmac[12], hmac[13], hmac[14], hmac[15], hmac[16]);
 
-        hexDump ("Obtained ICV", tmp, 16);
-        hexDump ("Computed ICV", hmac, 32);
-        hexDump ("Received PTP message", msg, msg_len);
-        pr_info(" ");
+        //hexDump ("Obtained ICV", tmp, 16);
+        //hexDump ("Computed ICV", hmac, 32);
+        //hexDump ("Received PTP message", msg, msg_len);
+        //pr_info(" ");
     }
 
     return ret;

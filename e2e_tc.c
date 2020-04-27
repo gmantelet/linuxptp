@@ -155,7 +155,7 @@ enum fsm_event e2e_event(struct port *p, int fd_index)
 		return EV_NONE;
 	}
 
-	dup = msg_duplicate(msg, cnt);
+	dup = msg_duplicate(msg, cnt, p->use_secure_flag);
 	if (!dup) {
 		msg_put(msg);
 		return EV_NONE;
