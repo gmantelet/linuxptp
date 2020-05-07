@@ -421,9 +421,11 @@ int msg_post_recv(struct ptp_message *m, int cnt, int is_secure)
         {
             err = suffix_secure_recv(m, htons(m->header.messageLength));
 	    if (err)
+            {
+	        pr_err("%s DID NOT pass ICV test", msg_type_string(msg_type(m)));
 		return err;
+            }
         }
-
 	err = hdr_post_recv(&m->header);
 	if (err)
 		return err;
