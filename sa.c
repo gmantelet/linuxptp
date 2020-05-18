@@ -55,6 +55,31 @@ int add_incoming_sa(char *buf, struct ClockIdentity *ci)
     return 0;
 }
 
+void add_dynamic_sa(struct security_association *sa, struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port)
+{
+    struct security_association *sap, *last;
+
+    memset(sa, 0, sizeof(struct security_association));
+    memcpy(&(sa->dst_port), dst_port, sizeof(struct PortIdentity));
+    memset(&(sa->dst_address), 255, 6);
+    memcpy(&(sa->src_port), src_port, sizeof(struct PortIdentity));
+    memcpy(&(sa->src_address), src_add, sizeof(add));
+
+    if (incoming_sa.lh_first == NULL)
+    {
+        LIST_INSERT_HEAD(&incoming_sa, sa, sa_entry);
+        pr_info("List insert head...");
+    }
+    else
+    {
+        for (sap = incoming_sa.lh_first; sap != NULL; sap = sap->sa_entry.le_next)
+            last = sap;
+
+        LIST_INSERT_AFTER(last, sa, sa_entry);
+        pr_info("List insert after...");
+    }
+}
+
 int add_outgoing_sa(char *buf)
 {
     struct security_association *sa, *sap, *last;
@@ -95,7 +120,7 @@ int add_outgoing_sa(char *buf)
     return 0;
 }
 
-struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port, char *dst_add)
+struct security_association* get_incoming_sa(struct PortIdentity *src_port, char *src_add, struct PortIdentity *dst_port)
 {
     struct security_association *sa = NULL;
 
@@ -103,24 +128,20 @@ struct security_association* get_incoming_sa(struct PortIdentity *src_port, char
     {
         if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)) &&
             !memcmp(sa->src_address, src_add, 6) &&
-            !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)) &&
-            !memcmp(sa->dst_address, dst_add, 6))
+            !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)))
             return sa;
     }
 
     return NULL;
 }
 
-struct security_association* get_outgoing_sa(struct PortIdentity *dst_port, char *dst_add, struct PortIdentity *src_port, char *src_add)
+struct security_association* get_outgoing_sa(struct PortIdentity *src_port)
 {
     struct security_association *sa = NULL;
 
     for (sa = outgoing_sa.lh_first; sa != NULL; sa = sa->sa_entry.le_next)
     {
-        if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)) &&
-            !memcmp(sa->src_address, src_add, 6) &&
-            !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)) &&
-            !memcmp(sa->dst_address, dst_add, 6))
+        if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)))
             return sa;
     }
 

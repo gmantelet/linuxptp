@@ -74,10 +74,11 @@ LIST_HEAD(outgoing_sa_list, security_association) outgoing_sa;
 
 int init_security_association_tables(void);
 int add_incoming_sa(char *buf, struct ClockIdentity *ci);
+void add_dynamic_sa(struct security_association *, struct PortIdentity *, char *, struct PortIdentity *);
 int add_outgoing_sa(char *buf);
 
-struct security_association* get_incoming_sa(struct PortIdentity*, char *, struct PortIdentity *, char *);
-struct security_association* get_outgoing_sa(struct PortIdentity*, char *, struct PortIdentity *, char *);
+struct security_association* get_incoming_sa(struct PortIdentity*, char *, struct PortIdentity *);
+struct security_association* get_outgoing_sa(struct PortIdentity*);
 
 // LIST_INIT(&key_head);
 //
