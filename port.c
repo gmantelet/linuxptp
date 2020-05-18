@@ -1409,7 +1409,7 @@ static int port_pdelay_request(struct port *p)
 			goto out;
 		}
 
-		if (authentication_tlv_append(msg))
+		if (authentication_tlv_append(msg, out_sa))
 		{
 			pr_err("port %hu: PdelayReq append authentication tlv failed", portnum(p));
 			err = -1;
@@ -1497,7 +1497,7 @@ int port_delay_request(struct port *p)
 			goto out;
 		}
 
-		if (authentication_tlv_append(msg))
+		if (authentication_tlv_append(msg, out_sa))
 		{
 			pr_err("port %hu: DelayReq append authentication tlv failed", portnum(p));
 			goto out;
@@ -1584,7 +1584,7 @@ int port_tx_announce(struct port *p, struct address *dst)
 			goto out;
 		}
 
-		if (authentication_tlv_append(msg))
+		if (authentication_tlv_append(msg, out_sa))
 		{
 			pr_err("port %hu: Announce append authentication tlv failed", portnum(p));
 			goto out;
@@ -1607,7 +1607,7 @@ out:
 static int port_tx_signaling(struct port *p, struct security_association *sa, struct address *dst, struct PortIdentity *target)
 {
 	struct timePropertiesDS *tp = clock_time_properties(p->clock);
-	struct parent_ds *dad = clock_parent_ds(p->clock);
+	// struct parent_ds *dad = clock_parent_ds(p->clock);
 	struct ptp_message *msg;
 	int err;
 
@@ -1731,21 +1731,24 @@ int port_tx_sync(struct port *p, struct address *dst)
 		msg->header.logMessageInterval = 0x7f;
 	}
 
-    if (p->use_secure_flag)
+	if (p->use_secure_flag)
+	{
 		msg->header.flagField[0] |= SECURE;
 
-	if (p->use_secure_flag && security_association_update_tlv_append(msg))
-	{
-		pr_err("port %hu: Sync append security association update tlv failed", portnum(p));
-		err = -1;
-		goto out;
-	}
+        	struct security_association* out_sa = get_outgoing_sa(&(p->portIdentity));
+		if (security_association_update_tlv_append(msg))
+		{
+			pr_err("port %hu: Sync append security association update tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 
-	if (p->use_secure_flag && authentication_tlv_append(msg))
-	{
-		pr_err("port %hu: Sync append authentication tlv failed", portnum(p));
-		err = -1;
-		goto out;
+		if (authentication_tlv_append(msg, out_sa))
+		{
+			pr_err("port %hu: Sync append authentication tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 	}
 
 	err = port_prepare_and_send(p, msg, event);
@@ -1787,21 +1790,24 @@ int port_tx_sync(struct port *p, struct address *dst)
 		goto out;
 	}
 
-    if (p->use_secure_flag)
+    	if (p->use_secure_flag)
+	{
 		fup->header.flagField[0] |= SECURE;
 
-	if (p->use_secure_flag && security_association_update_tlv_append(fup))
-	{
-		pr_err("port %hu: append security association update tlv failed", portnum(p));
-		err = -1;
-		goto out;
-	}
+        	struct security_association* out_sa = get_outgoing_sa(&(p->portIdentity));
+		if (security_association_update_tlv_append(fup))
+		{
+			pr_err("port %hu: append security association update tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 
-	if (p->use_secure_flag && authentication_tlv_append(fup))
-	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
-		err = -1;
-		goto out;
+		if (authentication_tlv_append(fup, out_sa))
+		{
+			pr_err("port %hu: append authentication tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 	}
 
 	err = port_prepare_and_send(p, fup, TRANS_GENERAL);
@@ -2143,21 +2149,23 @@ static int process_delay_req(struct port *p, struct ptp_message *m)
 		goto out;
 	}
 
-    if (p->use_secure_flag)
+    	if (p->use_secure_flag)
+	{
 		msg->header.flagField[0] |= SECURE;
+		struct security_association* out_sa = get_outgoing_sa(&(p->portIdentity));
+		if (security_association_update_tlv_append(msg))
+		{
+			pr_err("port %hu: DelayResp append security association update tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 
-	if (p->use_secure_flag && security_association_update_tlv_append(msg))
-	{
-		pr_err("port %hu: DelayResp append security association update tlv failed", portnum(p));
-		err = -1;
-		goto out;
-	}
-
-	if (p->use_secure_flag && authentication_tlv_append(msg))
-	{
-		pr_err("port %hu: append authentication tlv failed", portnum(p));
-		err = -1;
-		goto out;
+		if (authentication_tlv_append(msg, out_sa))
+		{
+			pr_err("port %hu: append authentication tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 	}
 
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
@@ -2354,21 +2362,23 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 		rsp->header.flagField[0] |= UNICAST;
 	}
 
-    if (p->use_secure_flag)
+    	if (p->use_secure_flag)
+	{
 		rsp->header.flagField[0] |= SECURE;
+		struct security_association* out_sa = get_outgoing_sa(&(p->portIdentity));
+		if (security_association_update_tlv_append(rsp))
+		{
+			pr_err("port %hu: PdelayResp append security association update tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 
-	if (p->use_secure_flag && security_association_update_tlv_append(rsp))
-	{
-		pr_err("port %hu: PdelayResp append security association update tlv failed", portnum(p));
-		err = -1;
-		goto out;
-	}
-
-	if (p->use_secure_flag && authentication_tlv_append(rsp))
-	{
-		pr_err("port %hu: PdelayResp append authentication tlv failed", portnum(p));
-		err = -1;
-		goto out;
+		if (authentication_tlv_append(rsp, out_sa))
+		{
+			pr_err("port %hu: PdelayResp append authentication tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 	}
 
 	err = peer_prepare_and_send(p, rsp, event);
@@ -2409,21 +2419,23 @@ int process_pdelay_req(struct port *p, struct ptp_message *m)
 		fup->header.flagField[0] |= UNICAST;
 	}
 
-    if (p->use_secure_flag)
+	if (p->use_secure_flag)
+	{
 		fup->header.flagField[0] |= SECURE;
+		struct security_association* out_sa = get_outgoing_sa(&(p->portIdentity));
+		if (security_association_update_tlv_append(fup))
+		{
+			pr_err("port %hu: PdelayRespFollowUp append security association update tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 
-	if (p->use_secure_flag && security_association_update_tlv_append(fup))
-	{
-		pr_err("port %hu: PdelayRespFollowUp append security association update tlv failed", portnum(p));
-		err = -1;
-		goto out;
-	}
-
-	if (p->use_secure_flag && authentication_tlv_append(fup))
-	{
-		pr_err("port %hu: PdelayRespFollowUp append authentication tlv failed", portnum(p));
-		err = -1;
-		goto out;
+		if (authentication_tlv_append(fup, out_sa))
+		{
+			pr_err("port %hu: PdelayRespFollowUp append authentication tlv failed", portnum(p));
+			err = -1;
+			goto out;
+		}
 	}
 
 	err = peer_prepare_and_send(p, fup, TRANS_GENERAL);
@@ -2950,7 +2962,7 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		return EV_FAULT_DETECTED;
 	}
 
-    err = msg_post_recv(msg, cnt, p->use_secure_flag);
+    	err = msg_post_recv(msg, cnt, p->use_secure_flag);
 	if (err) {
 		switch (err) {
 		case -EBADMSG:
@@ -2964,38 +2976,56 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		return EV_NONE;
 	}
 
+    if (p->use_secure_flag)
+    {
 	//
 	// HERE: I check my incoming SA
 	//
-    static warns_periodic = 0;
-    struct security_association *in_sa;
-    in_sa = get_incoming_sa(msg->header.sourcePortIdentity, msg->address.sa.sa_data, p->portIdentity);
-    if ((in_sa == NULL) && ((warns_periodic++ % 100) == 0)) {
-        pr_info("port %hu: no matching sa for message. Creating one dynamically.", portnum(p));
-        add_dynamic_sa(in_sa, msg->header.sourcePortIdentity, msg->address.sa.sa_data, p->portIdentity);
+    	static int warns_periodic = 0;
+    	struct security_association *in_sa;
+    	in_sa = get_incoming_sa(&(msg->header.sourcePortIdentity), msg->address.sa.sa_data, &(p->portIdentity));
+    	//if (in_sa == NULL) 
+        //{
+        //	if ((warns_periodic++ % 100) == 0)
+        //		pr_info("port %hu: no matching sa for message. Creating one dynamically.", portnum(p));
+        //      struct security_association new_sa;
+        //	add_dynamic_sa(&new_sa, &(msg->header.sourcePortIdentity), msg->address.sa.sa_data, &(p->portIdentity));
+        //      in_sa = &new_sa;
+    	//}
+
+        if (in_sa == NULL)
+        {
+                if ((warns_periodic++ % 100) == 0)
+                	pr_err("port %hu: Failed to find incoming SA.", portnum(p));
+                msg_put(msg);
+		return EV_NONE;
+        }
+
+
+        //
+        // If the SA is not trusted, send signalling message right NOW
+        //
+        if (in_sa->trust_state == UNTRUSTED)
+        {
+        	pr_info("port %hu: incoming SA is UNTRUSTED.", portnum(p));
+        	in_sa->challenge_required = 1;
+	}
+
+    	if (in_sa->lifetime_id == 0 && in_sa->next_lifetime_id == 0)
+    	{
+        	pr_info("port %hu: incoming SA lifetime id is not set.", portnum(p));
+        	in_sa->challenge_required = 1;
+    	}
+
+    	if (port_tx_signaling(p, in_sa, &msg->address, &(msg->header.sourcePortIdentity)))
+            	pr_err("port %hu: FAILED to send signaling message.", portnum(p));
+
+    	if (in_sa->trust_state == UNTRUSTED)
+	{
+		msg_put(msg);
+        	return EV_NONE;
+	}
     }
-
-    //
-    // If the SA is not trusted, send signalling message right NOW
-    //
-    if (in_sa->trust_state == UNTRUSTED)
-    {
-        pr_info("port %hu: incoming SA is UNTRUSTED.", portnum(p));
-        in_sa->challenge_required = 1;
-    }
-
-    if (in_sa->lifetime_id == 0 && in_sa->next_lifetime_id == 0)
-    {
-        pr_info("port %hu: incoming SA lifetime id is not set.", portnum(p));
-        in_sa->challenge_required = 1;
-    }
-
-    if port_tx_signaling(p, in_sa, &msg->address, &(msg->header.sourcePortIdentity))
-            pr_err("port %hu: FAILED to send signaling message.", portnum(p));
-
-    if (in_sa->trust_state == UNTRUSTED)
-        return EV_NONE;
-
 
 	port_stats_inc_rx(p, msg);
 	if (port_ignore(p, msg)) {
