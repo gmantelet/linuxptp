@@ -1611,12 +1611,12 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 	struct ptp_message *msg;
 	int err;
 
-	if (p->inhibit_multicast_service && !dst) {
+	if (p->inhibit_multicast_service && !dst)
 		return 0;
-	}
-	if (!port_capable(p)) {
+	
+        if (!port_capable(p) && !p->use_secure_flag) 
 		return 0;
-	}
+
 	msg = msg_allocate();
 	if (!msg) {
 		return -1;
@@ -1642,8 +1642,8 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 
 	memcpy(&(msg->signaling.targetPortIdentity), target, sizeof(struct PortIdentity));
 
-    if (p->use_secure_flag)
-    {
+        if (p->use_secure_flag)
+        {
 		msg->header.flagField[0] |= SECURE;
 		if ((sa->challenge_required || sa->response_required) && authentication_challenge_tlv_append(msg, sa))
 		{
@@ -1656,7 +1656,7 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 		    pr_err("port %hu: Signaling append authentication tlv failed", portnum(p));
 		    goto out;
 	    }
-    }
+        }
 
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
 	if (err) {
