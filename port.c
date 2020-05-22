@@ -25,6 +25,8 @@
 #include <sys/queue.h>
 #include <net/if.h>
 
+#include "sodium.h"
+
 #include "bmc.h"
 #include "clock.h"
 #include "designated_fsm.h"
@@ -461,6 +463,9 @@ static int authentication_challenge_tlv_append(struct ptp_message *m, struct sec
 
 	else if (sa->response_required)
 		auth->challenge_type = CHALLENGE_RESPONSE;
+
+        if (sa->request_nonce == 0)
+            sa->request_nonce = randombytes_random();
 
 	auth->request_nonce = sa->request_nonce;
 	auth->response_nonce = sa->response_nonce;
