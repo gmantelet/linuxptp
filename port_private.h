@@ -25,6 +25,7 @@
 #include "clock.h"
 #include "fsm.h"
 #include "msg.h"
+#include "sa.h"
 #include "tmv.h"
 
 #define NSEC2SEC 1000000000LL
@@ -150,6 +151,7 @@ struct port {
 	struct unicast_service *unicast_service;
 	int inhibit_multicast_service;
 	int use_secure_flag;
+        struct security_association *in_sa;
 };
 
 #define portnum(p) (p->portIdentity.portNumber)

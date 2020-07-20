@@ -37,6 +37,7 @@ int add_incoming_sa(char *buf, struct ClockIdentity *ci)
     memcpy(&(sa->src_port), cid, sizeof(struct PortIdentity));
     sa->src_port.portNumber = pnum;
     memcpy(&(sa->src_address), add, sizeof(add));
+    sa->challenge_timeout = 10;
 
     if (incoming_sa.lh_first == NULL)
     {

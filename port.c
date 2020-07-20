@@ -438,6 +438,7 @@ static int authentication_tlv_append(struct ptp_message *m, struct security_asso
 	auth->key_id         = sa->key_id;
 	auth->algorithm_id   = ALGORITHM_ID_HMAC_SHA2_128;
 
+        sa->replay_counter += 2;
 	return 0;
 }
 
@@ -569,6 +570,21 @@ static struct follow_up_info_tlv *follow_up_info_extract(struct ptp_message *m)
 		    !f->subtype[0] && !f->subtype[1] && f->subtype[2] == 1) {
 			return f;
 		}
+	}
+	return NULL;
+}
+
+static struct authentication_challenge_tlv *challenge_response_extract(struct ptp_message *m)
+{
+	struct authentication_challenge_tlv *f;
+	struct tlv_extra *extra;
+
+	TAILQ_FOREACH(extra, &m->tlv_list, list) 
+        {
+		f = (struct authentication_challenge_tlv *) extra->tlv;
+		if ((f->type == TLV_AUTHENTICATION_CHALLENGE) &&
+		    (f->length == sizeof(*f) - sizeof(f->type) - sizeof(f->length)))
+			return f;
 	}
 	return NULL;
 }
@@ -1193,6 +1209,11 @@ static int port_set_sync_tx_tmo(struct port *p)
 	return set_tmo_log(p->fda.fd[FD_SYNC_TX_TIMER], 1, p->logSyncInterval);
 }
 
+static int port_set_challenge_tmo(struct port *p)
+{
+        return set_tmo_lin(p->fda.fd[FD_CHALLENGE_TIMER], 10);
+}
+
 void port_show_transition(struct port *p, enum port_state next,
 			  enum fsm_event event)
 {
@@ -1616,6 +1637,11 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 	struct ptp_message *msg;
 	int err;
 
+        if ((sa->challenge_state == CHALLENGING) && (sa->response_required == 0))
+        {
+            return 0;
+        }
+
 	if (p->inhibit_multicast_service && !dst)
 		return 0;
 	
@@ -1666,13 +1692,29 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
 	if (err) {
 		pr_err("port %hu: send signaling failed", portnum(p));
-	}
+	}  
+        
+        if ((sa->challenge_state == IDLE) && sa->challenge_required)
+        {
+            sa->challenge_state = CHALLENGING;
+            sa->challenge_timer = sa->challenge_timeout;
+            p->in_sa = sa;
+            port_set_challenge_tmo(p);
+            pr_info("Incoming SA Challenging state from IDLE to CHALLENGING");
+        }
+
+        if (sa->challenge_required)
+            sa->challenge_required = 0;
+
+        if (sa->response_required)
+            sa->response_required = 0;
+
 	msg_put(msg);
 	return err;
 
 out:
 	msg_put(msg);
-	return -1;
+ 	return -1;
 }
 
 int port_tx_sync(struct port *p, struct address *dst)
@@ -2942,6 +2984,16 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		pr_debug("port %hu: unicast request timeout", portnum(p));
 		return unicast_client_timer(p) ? EV_FAULT_DETECTED : EV_NONE;
 
+        case FD_CHALLENGE_TIMER:
+		pr_info("port %hu: Incoming SA challenge timeout", portnum(p));
+                if (p->in_sa)
+                {
+                    p->in_sa->challenge_state = IDLE;
+                    pr_info("Incoming SA Challenging state from CHALLENGING to IDLE");
+                }
+                port_clr_tmo(p->fda.fd[FD_CHALLENGE_TIMER]);
+                return EV_NONE;
+
 	case FD_RTNL:
 		pr_debug("port %hu: received link status notification", portnum(p));
 		rtnl_link_status(fd, p->name, port_link_status, p);
@@ -3006,23 +3058,69 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		return EV_NONE;
         }
 
-
         //
         // If the SA is not trusted, send signalling message right NOW
         //
         if (in_sa->trust_state == UNTRUSTED)
         {
-        	pr_info("port %hu: incoming SA is UNTRUSTED.", portnum(p));
+            // 
+            // If the received message is signaling and its challenge tlv is a response
+            //
+            if ((in_sa->challenge_state == CHALLENGING) && (msg_type(msg) == SIGNALING))
+            {
+                struct authentication_challenge_tlv *chal = challenge_response_extract(msg);
+                if (!chal)
+                {
+                    pr_debug("No authentication challenge tlv on received signaling while challenging");
+                    msg_put(msg);
+                    return EV_NONE;
+                }
+
+                switch (chal->challenge_type)
+                {
+                    case CHALLENGE_RESPONSE_REQUEST:
+                        in_sa->response_required = 1;
+
+	            case CHALLENGE_RESPONSE:
+                        in_sa->challenge_required = 0;
+                        in_sa->response_nonce = chal->response_nonce;
+                        if (chal->request_nonce != in_sa->request_nonce)
+                        {
+                            pr_info("Invalid request nonce. Expected %u, received %u", in_sa->request_nonce, chal->request_nonce);
+                            msg_put(msg);
+                            return EV_NONE;
+                        }
+                        break;
+
+                    default:
+                        pr_info("Challenge response expected while challenging");
+                        msg_put(msg);
+                        return EV_NONE;  
+                }
+
+                if (in_sa->response_nonce && in_sa->request_nonce)
+                {
+                    in_sa->trust_state = TRUSTED;
+                    in_sa->challenge_state = IDLE;
+                    port_clr_tmo(p->fda.fd[FD_CHALLENGE_TIMER]);
+                    pr_info("Incoming SA is now TRUSTED");
+                }
+            }
+
+	    // 
+            // Message received for this untrusted, idle SA. Set the flag so that signaling will be sent later.
+            //
+            else if (in_sa->challenge_state == IDLE)
         	in_sa->challenge_required = 1;
 	}
 
-    	if (in_sa->lifetime_id == 0 && in_sa->next_lifetime_id == 0)
-    	{
-        	pr_info("port %hu: incoming SA lifetime id is not set.", portnum(p));
-        	in_sa->challenge_required = 1;
-    	}
+    	//if (in_sa->lifetime_id == 0 && in_sa->next_lifetime_id == 0)
+    	//{
+        //	//pr_info("port %hu: incoming SA lifetime id is not set.", portnum(p));
+        //	in_sa->challenge_required = 1;
+    	//}
 
-    	if (port_tx_signaling(p, in_sa, &msg->address, &(msg->header.sourcePortIdentity)))
+    	if (port_tx_signaling(p, in_sa, NULL, &(msg->header.sourcePortIdentity))) // &msg->address, &(msg->header.sourcePortIdentity)))
             	pr_err("port %hu: FAILED to send signaling message.", portnum(p));
 
     	if (in_sa->trust_state == UNTRUSTED)
@@ -3079,8 +3177,9 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 			event = EV_STATE_DECISION_EVENT;
 		break;
 	case SIGNALING:
-		if (process_signaling(p, msg)) {
+		if (process_signaling(p, msg)) {  //Legacy process signaling
 			event = EV_FAULT_DETECTED;
+                        pr_err("legacy process signaling failed");
 		}
 		break;
 	case MANAGEMENT:
