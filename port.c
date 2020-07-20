@@ -438,6 +438,7 @@ static int authentication_tlv_append(struct ptp_message *m, struct security_asso
 	auth->key_id         = sa->key_id;
 	auth->algorithm_id   = ALGORITHM_ID_HMAC_SHA2_128;
 
+    sa->replay_counter += 2;
 	return 0;
 }
 
@@ -1618,8 +1619,8 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 
 	if (p->inhibit_multicast_service && !dst)
 		return 0;
-	
-        if (!port_capable(p) && !p->use_secure_flag) 
+
+        if (!port_capable(p) && !p->use_secure_flag)
 		return 0;
 
 	msg = msg_allocate();
@@ -2989,7 +2990,7 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
     	static int warns_periodic = 0;
     	struct security_association *in_sa;
     	in_sa = get_incoming_sa(&(msg->header.sourcePortIdentity), msg->address.sa.sa_data, &(p->portIdentity));
-    	//if (in_sa == NULL) 
+    	//if (in_sa == NULL)
         //{
         //	if ((warns_periodic++ % 100) == 0)
         //		pr_info("port %hu: no matching sa for message. Creating one dynamically.", portnum(p));
