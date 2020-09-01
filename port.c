@@ -59,6 +59,8 @@ enum syfu_event {
 	FUP_MATCH,
 };
 
+static int replay_counter = 0;
+
 static int port_is_ieee8021as(struct port *p);
 static void port_nrate_initialize(struct port *p);
 
@@ -435,10 +437,17 @@ static int authentication_tlv_append(struct ptp_message *m, struct security_asso
 	auth->length         = sizeof(*auth) - sizeof(auth->type) - sizeof(auth->length);
 	auth->lifetime_id    = sa->lifetime_id;
 	auth->replay_counter = sa->replay_counter;
-	auth->key_id         = sa->key_id;
+	//auth->key_id         = sa->key_id;
+	auth->key_id = last_key_stored();
 	auth->algorithm_id   = ALGORITHM_ID_HMAC_SHA2_128;
 
-        sa->replay_counter += 2;
+	//printf("Auth key id: %u\n", auth->key_id);
+	sa->key_id = auth->key_id;
+    sa->replay_counter += 2;
+
+    // I look for new keys after so I use slightly old keys first, and avoid potential synchronization issues
+    // Maybe the other side does not have to get the same key I am retrieving right now.
+    fetch_key();
 	return 0;
 }
 
@@ -579,10 +588,25 @@ static struct authentication_challenge_tlv *challenge_response_extract(struct pt
 	struct authentication_challenge_tlv *f;
 	struct tlv_extra *extra;
 
-	TAILQ_FOREACH(extra, &m->tlv_list, list) 
+	TAILQ_FOREACH(extra, &m->tlv_list, list)
         {
 		f = (struct authentication_challenge_tlv *) extra->tlv;
 		if ((f->type == TLV_AUTHENTICATION_CHALLENGE) &&
+		    (f->length == sizeof(*f) - sizeof(f->type) - sizeof(f->length)))
+			return f;
+	}
+	return NULL;
+}
+
+static struct authentication_tlv *authentication_extract(struct ptp_message *m)
+{
+	struct authentication_tlv *f;
+	struct tlv_extra *extra;
+
+	TAILQ_FOREACH(extra, &m->tlv_list, list)
+        {
+		f = (struct authentication_tlv *) extra->tlv;
+		if ((f->type == TLV_AUTHENTICATION) &&
 		    (f->length == sizeof(*f) - sizeof(f->type) - sizeof(f->length)))
 			return f;
 	}
@@ -1214,6 +1238,11 @@ static int port_set_challenge_tmo(struct port *p)
         return set_tmo_lin(p->fda.fd[FD_CHALLENGE_TIMER], 10);
 }
 
+static int port_set_trusted_tmo(struct port *p)
+{
+        return set_tmo_lin(p->fda.fd[FD_TRUSTED_TIMER], 10);
+}
+
 void port_show_transition(struct port *p, enum port_state next,
 			  enum fsm_event event)
 {
@@ -1692,8 +1721,8 @@ static int port_tx_signaling(struct port *p, struct security_association *sa, st
 	err = port_prepare_and_send(p, msg, TRANS_GENERAL);
 	if (err) {
 		pr_err("port %hu: send signaling failed", portnum(p));
-	}  
-        
+	}
+
         if ((sa->challenge_state == IDLE) && sa->challenge_required)
         {
             sa->challenge_state = CHALLENGING;
@@ -2988,10 +3017,20 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		pr_info("port %hu: Incoming SA challenge timeout", portnum(p));
                 if (p->in_sa)
                 {
+                    p->in_sa->trust_state = UNTRUSTED;
                     p->in_sa->challenge_state = IDLE;
                     pr_info("Incoming SA Challenging state from CHALLENGING to IDLE");
                 }
                 port_clr_tmo(p->fda.fd[FD_CHALLENGE_TIMER]);
+                return EV_NONE;
+
+        case FD_TRUSTED_TIMER:
+                pr_info("port %hu: Incoming SA trusted timeout", portnum(p));
+                if (p->in_sa)
+                {
+                  p->in_sa->challenge_required = 1;
+                }
+                port_clr_tmo(p->fda.fd[FD_TRUSTED_TIMER]);
                 return EV_NONE;
 
 	case FD_RTNL:
@@ -3063,7 +3102,7 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
         //
         if (in_sa->trust_state == UNTRUSTED)
         {
-            // 
+            //
             // If the received message is signaling and its challenge tlv is a response
             //
             if ((in_sa->challenge_state == CHALLENGING) && (msg_type(msg) == SIGNALING))
@@ -3095,7 +3134,7 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
                     default:
                         pr_info("Challenge response expected while challenging");
                         msg_put(msg);
-                        return EV_NONE;  
+                        return EV_NONE;
                 }
 
                 if (in_sa->response_nonce && in_sa->request_nonce)
@@ -3103,11 +3142,12 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
                     in_sa->trust_state = TRUSTED;
                     in_sa->challenge_state = IDLE;
                     port_clr_tmo(p->fda.fd[FD_CHALLENGE_TIMER]);
+                    port_set_trusted_tmo(p);
                     pr_info("Incoming SA is now TRUSTED");
                 }
             }
 
-	    // 
+	    //
             // Message received for this untrusted, idle SA. Set the flag so that signaling will be sent later.
             //
             else if (in_sa->challenge_state == IDLE)
@@ -3128,7 +3168,43 @@ static enum fsm_event bc_event(struct port *p, int fd_index)
 		msg_put(msg);
         	return EV_NONE;
 	}
+
+        struct authentication_tlv *auth = authentication_extract(msg);
+        if ((replay_counter != auth->replay_counter) &&
+                (((replay_counter < auth->replay_counter) && (auth->replay_counter - replay_counter) < 32768) ||
+                 ((replay_counter > auth->replay_counter) && (replay_counter - auth->replay_counter) > 32768)     ))
+        {
+//                        pr_err("port %hu: Replay Counter OK, obtained %u, last was %u", portnum(p), auth->replay_counter, replay_counter);
+                        replay_counter = auth->replay_counter;
+        }
+        else
+        {
+//            pr_err("port %hu: Replay Counter error obtained %u, last was %u", portnum(p), auth->replay_counter, replay_counter);
+            if (!replay_counter)
+              replay_counter = auth->replay_counter;
+            else
+            {
+                msg_put(msg);
+                return EV_NONE;
+            }
+        }
     }
+
+
+       /* if ((in_sa->replay_counter != auth->replay_counter) &&
+        	(((in_sa->replay_counter < auth->replay_counter) && (auth->replay_counter - in_sa->replay_counter) < 32768) ||
+        	 ((in_sa->replay_counter > auth->replay_counter) && (in_sa->replay_counter - auth->replay_counter) > 32768)	))
+        {
+                        pr_err("port %hu: Replay Counter OK, obtained %u, last was %u", portnum(p), auth->replay_counter, in_sa->replay_counter);
+ 			in_sa->replay_counter = auth->replay_counter;
+        }
+		else
+		{
+			pr_err("port %hu: Replay Counter error obtained %u, last was %u", portnum(p), auth->replay_counter, in_sa->replay_counter);
+		}
+
+
+    }*/
 
 	port_stats_inc_rx(p, msg);
 	if (port_ignore(p, msg)) {

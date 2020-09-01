@@ -105,6 +105,9 @@ int add_outgoing_sa(char *buf)
     sa->dst_port.portNumber = pnum;
     memcpy(&(sa->dst_address), add, sizeof(add));
 
+    //pr_info("sa.c line 107 (roughly), setting temporary key id to 65535");
+    //sa->key_id = 65535;
+
     if (outgoing_sa.lh_first == NULL)
     {
         LIST_INSERT_HEAD(&outgoing_sa, sa, sa_entry);
@@ -142,7 +145,7 @@ struct security_association* get_incoming_sa(struct PortIdentity *src_port, char
         //unsigned char *c2 = (unsigned char *) &(sa->src_port);
     	//pr_info("SA src Port Identity: %02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x.%02x%02x", c2[0], c2[1], c2[2], c2[3], c2[4], c2[5], c2[6], c2[7], c2[8], c2[9]);
         //pr_info("SA src Address      : %02x:%02x:%02x:%02x:%02x:%02x", sa->src_address[0], sa->src_address[1], sa->src_address[2], sa->src_address[3], sa->src_address[4], sa->src_address[5]);
- 
+
         if (!memcmp(&(sa->src_port), src_port, sizeof(struct PortIdentity)) &&
             //!memcmp(sa->src_address, src_add, 6) &&
             !memcmp(&(sa->dst_port), dst_port, sizeof(struct PortIdentity)))

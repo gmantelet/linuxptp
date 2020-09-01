@@ -195,7 +195,7 @@ static int suffix_secure_recv(struct ptp_message *msg, int len)
 	uint8_t *ptr = msg_suffix(msg);
 	struct tlv_extra *extra;
         uint16_t type;
-        uint16_t length; 
+        uint16_t length;
         int msg_len = len;
         struct authentication_tlv *auth;
 
@@ -223,18 +223,26 @@ static int suffix_secure_recv(struct ptp_message *msg, int len)
 		}
 		len -= length;
 		ptr += length;
-		
-                if (type == TLV_AUTHENTICATION)
-                {
-                    auth = (struct authentication_tlv *)extra->tlv;
-                    if (validate_icv((unsigned char *)msg, msg_len, auth->icv, NULL)) //TODO: NULL for asking dummy key
-                    {
-                        pr_err("Invalid ICV on %sd", msg_type_string(msg_type(msg)));
-			tlv_extra_recycle(extra);
-                        return -EBADMSG;
-                    }
 
-                }
+        if (type == TLV_AUTHENTICATION)
+        {
+            auth = (struct authentication_tlv *)extra->tlv;
+            unsigned char key[32];
+            if (get_key((Octet *)key, htons(auth->key_id)))
+            {
+                pr_err("Key %u could not be located to keystore", htons(auth->key_id));
+                tlv_extra_recycle(extra);
+                return -EBADMSG;
+            }
+
+            if (validate_icv((unsigned char *)msg, msg_len, auth->icv, key))
+            {
+                pr_err("Invalid ICV on %sd", msg_type_string(msg_type(msg)));
+                tlv_extra_recycle(extra);
+                return -EBADMSG;
+            }
+
+        }
 		//msg_tlv_attach(msg, extra);
 	}
 	return 0;
@@ -289,24 +297,27 @@ static void suffix_pre_send(struct ptp_message *msg)
 		tlv = extra->tlv;
 		tlv_pre_send(tlv, extra);
 
-                if (tlv->type == TLV_AUTHENTICATION)
-                {
-               	    unsigned char icv[32];
-                    struct authentication_tlv *auth = (struct authentication_tlv *)tlv;        
-		    tlv->type = htons(tlv->type);
-		    tlv->length = htons(tlv->length);
+        if (tlv->type == TLV_AUTHENTICATION)
+        {
+            unsigned char icv[32];
+            unsigned char key[32];
 
-                    generate_icv((unsigned char *)msg, ntohs(msg->header.messageLength), icv, NULL);  //TODO: NULL for asking dummy key
+            struct authentication_tlv *auth = (struct authentication_tlv *)tlv;
+            tlv->type = htons(tlv->type);
+            tlv->length = htons(tlv->length);
 
-                    // memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
-                    memcpy(auth->icv, icv, sizeof(auth->icv));
-                }
+            get_key(key, htons(auth->key_id));
+            generate_icv((unsigned char *)msg, ntohs(msg->header.messageLength), icv, key);  //TODO: NULL for asking dummy key
 
-                else
-                {
-      		    tlv->type = htons(tlv->type);
-		    tlv->length = htons(tlv->length);
-                }
+            // memset(auth->icv, 255, sizeof(auth->icv));        // TODO: HASH_SHA256_96.
+            memcpy(auth->icv, icv, sizeof(auth->icv));
+        }
+
+        else
+        {
+            tlv->type = htons(tlv->type);
+            tlv->length = htons(tlv->length);
+        }
 	}
 	msg_tlv_recycle(msg);
 }
@@ -513,7 +524,7 @@ int msg_post_recv(struct ptp_message *m, int cnt, int is_secure)
 	return 0;
 }
 
-/* 
+/*
 int msg_secure_recv(struct ptp_message *m)
 {
         struct authentication_tlv              *auth;
